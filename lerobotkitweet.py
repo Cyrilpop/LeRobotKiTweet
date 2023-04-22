@@ -39,68 +39,86 @@ def tweepy_client():
     )
 
 def get_gpt_response(prompt: str):
-    OPENAI_API_KEY = ""
-    url = 'https://api.openai.com/v1/chat/completions'
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + OPENAI_API_KEY
-    }
-    data = {
-        "model": "gpt-3.5-turbo",
-        "messages": [
-            {
-                "role": "sytem", "content": "Tu es expert en SEO Twiter. Tes réponses ne dépassent pas 260 cractères. Soient environs 30 mots",
-                "role": "user", "content": prompt
-            }
-        ],
-        "temperature": 0.7
-    }
-    logging.info('Appel de l API GPT')
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    response_data = json.loads(response.content)
-    return response_data["choices"][0]["message"]["content"]
+    try:
+        OPENAI_API_KEY = ""
+        url = 'https://api.openai.com/v1/chat/completions'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + OPENAI_API_KEY
+        }
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {
+                    "role": "sytem", "content": "Tu es expert en SEO Twiter. Tes réponses ne dépassent pas 260 cractères. Soient environs 30 mots",
+                    "role": "user", "content": prompt
+                }
+            ],
+            "temperature": 0.7
+        }
+        logging.info('Appel de l API GPT')
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        response_data = json.loads(response.content)
+        return response_data["choices"][0]["message"]["content"]
+    except Exception as e:
+        logging.error(f"Erreur lors de l'appel à l'API OpenAI : {e}")
+        return None
 
 def publish_tweet(client, tweet_content: str, url_source: str = None):
-    if url_source is not None:
-        tweet_content += f" {url_source}"
-    logging.info(f"Publication du Tweet {tweet_content}")
-    print(tweet_content)
-    response = client.create_tweet(text=tweet_content)
+    try:
+        if url_source is not None:
+            tweet_content += f" {url_source}"
+        logging.info(f"Publication du Tweet {tweet_content}")
+        print(tweet_content)
+        response = client.create_tweet(text=tweet_content)
+        return response
+    except Exception as e:
+        logging.error(f"Erreur lors de la publication du Tweet {tweet_content}: {e}")
+        return None
 
 def main():
-    launch_conditions()
-    client = tweepy_client()
+    try:
+        launch_conditions()
+        client = tweepy_client()
 
-    if len(sys.argv) < 2:
-        print("Usage: robotKiTweet.py [sujet]")
-        sys.exit(1)
+        if len(sys.argv) < 2:
+            print("Usage: robotKiTweet.py [sujet]")
+            sys.exit(1)
 
-    sujet = ' '.join(sys.argv[1:])
-    logging.info(f"Lancement du script avec en paramètres {sujet}")
+        sujet = ' '.join(sys.argv[1:])
+        logging.info(f"Lancement du script avec en paramètres {sujet}")
 
-    if sujet in ['humeur_matin', 'humeur_soir']:
-        prompt = "Tu joues le role de LeRobotKiTweet, un petit robot intergalactique qui voyage dans notre monde. C'est {0}, {1} Le texte est pour twitter, il doit être {2}, ton message doit être unique et original, donner la bonne humeur, le smile et faire environ {3} mots. Il doit se terminer par 3 ou 4 hashtags.".format('le début de journée' if sujet == 'humeur_matin' else 'la fin de journée', 'et tu donnes ton humeur du jour.' if sujet == 'humeur_matin' else "tu racontes toutes les aventures que tu as faites durant celle-ci. Tu donnes ton point de vue, tes sentiments. Parfois tu as le droit d'être triste mais ton message doit être positif.", 'drole' if sujet == 'humeur_matin' else 'positif', '25' if sujet == 'humeur_matin' else '30')
-        tweet_content = get_gpt_response(prompt)
-        publish_tweet(client, tweet_content)
-    else:
-        s = pyshorteners.Shortener()
-        googlenews = GoogleNews(lang='fr', region='FR')
-        logging.info('Appel de l API GoogleNew')
-        googlenews.search(sujet)
-        result = googlenews.result()
-        for idx, article in enumerate(result[1:2]):
-            titre = article['title']
-            url_source = s.tinyurl.short(article['link'])
-            article = Article(url_source)
-            article.download()
-            article.html
-            article.parse()
-            contenu = article.text
-            prompt = f"Résume le texte en input en 20 mots maximum et 250 caractères maximum également. Le texte de retour doit être écrit en francais et compter 25 mots MAXIMUM. Il doit finir par 3 ou 4 hashtag (sans tiret ni apostrophe) racoleurs, et donnant envie et vendeurs. Input : {contenu}"
-            logging.info(f"Titre article: {titre}")
+        if sujet in ['humeur_matin', 'humeur_soir']:
+            prompt = "Tu joues le role de LeRobotKiTweet, un petit robot intergalactique qui voyage dans notre monde. C'est {0}, {1} Le texte est pour twitter, il doit être {2}, ton message doit être unique et original, donner la bonne humeur, le smile et faire environ {3} mots. Il doit se terminer par 3 ou 4 hashtags.".format('le début de journée' if sujet == 'humeur_matin' else 'la fin de journée', 'et tu donnes ton humeur du jour.' if sujet == 'humeur_matin' else "tu racontes toutes les aventures que tu as faites durant celle-ci. Tu donnes ton point de vue, tes sentiments. Parfois tu as le droit d'être triste mais ton message doit être positif.", 'drole' if sujet == 'humeur_matin' else 'positif', '25' if sujet == 'humeur_matin' else '30')
             tweet_content = get_gpt_response(prompt)
-            logging.info(f"Publication du tweet: {tweet_content} {url_source}")
-            publish_tweet(client, tweet_content, url_source)
+            if tweet_content is not None:
+                publish_tweet(client, tweet_content)
+        else:
+            s = pyshorteners.Shortener()
+            googlenews = GoogleNews(lang='fr', region='FR')
+            logging.info('Appel de l API GoogleNew')
+            googlenews.search(sujet)
+            result = googlenews.result()
+            if len(result) > 0:
+                article = result[1]
+                titre = article['title']
+                url_source = s.tinyurl.short(article['link'])
+                article = Article(url_source)
+                article.download()
+                article.html
+                article.parse()
+                contenu = article.text
+                prompt = f"Résume le texte en input en 20 mots maximum et 250 caractères maximum également. Le texte de retour doit être écrit en francais et compter 25 mots MAXIMUM. Il doit finir par 3 ou 4 hashtag (sans tiret ni apostrophe) racoleurs, et donnant envie et vendeurs. Input : {contenu}"
+                logging.info(f"Titre article: {titre}")
+                tweet_content = get_gpt_response(prompt)
+                if tweet_content is not None:
+                    logging.info(f"Publication du tweet: {tweet_content} {url_source}")
+                    publish_tweet(client, tweet_content, url_source)
+            else:
+                logging.warning(f"Aucun résultat n'a été trouvé pour la recherche {sujet}.")
+    except Exception as e:
+        logging.error(f"Une erreur s'est produite : {e}")
+        pass
 
 if __name__ == "__main__":
     main()
