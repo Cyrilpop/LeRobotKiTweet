@@ -1,0 +1,5 @@
+GoogleNews>=1.5.9
+newspaper3k>=0.2.8
+pyshorteners>=1.0.1
+requests>=2.26.0
+tweepy>=3.10.0
