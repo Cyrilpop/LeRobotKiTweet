@@ -1,0 +1,19 @@
+subjects:
+  sciences:
+    name: sciences
+    weight: 4
+  Space:
+    name: NASA
+    weight: 1
+
+excluded_terms:
+  - word 1
+  - word 2
+
+openai_key: YOUR_KEY_HERE
+
+tweeter_keys:
+  consumer_key: YOUR_KEY_HERE
+  consumer_secret: YOUR_KEY_HERE
+  access_token: YOUR_KEY_HERE
+  access_token_secret: YOUR_KEY_HERE
