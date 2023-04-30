@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Imports du module standard Python
+import logging
 import os
 import random
 import sys
@@ -221,7 +222,7 @@ def launch_conditions(subject):
 
 def publish_tweet(client, tweet_content: str, short_url: str = None):
     try:
-        logging.info(f'Lancement de la fonction publish_tweet avec le paramètre tweet_content:  {tweet_content} {short_url}')
+        logging.info(f'Lancement de la fonction publish_tweet avec les paramètres client, tweet_content, short_url')
         if short_url is not None:
             tweet_content += f" {short_url}"
         tweet_c = tweet_content.replace('"', '')
