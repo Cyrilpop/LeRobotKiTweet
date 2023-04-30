@@ -1,29 +1,33 @@
 #!/usr/bin/env python3
-import logging
+# Imports du module standard Python
 import os
 import random
-import requests
 import sys
-import datetime
 from typing import List
 
+# Imports de modules externes
+import requests
 import json
+import yaml
 import nltk
-nltk.download('punkt')
-nltk.download('wordnet')
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
+from unidecode import unidecode
 from fuzzywuzzy import fuzz
 from GoogleNews import GoogleNews
 from newspaper import Article
 import pyshorteners
 import tweepy
-from unidecode import unidecode
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
 import feedparser
-import yaml
+
+# Téléchargements de données pour nltk
+nltk.download('punkt', quiet=True)
+nltk.download('wordnet', quiet=True)
+
+
 
 # Création du répertoire de log s'il n'existe pas
-log_dir = "/var/log/twittos"
+log_dir = "/var/log/leRobotKiTweet"
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
@@ -36,21 +40,93 @@ logging.basicConfig(
 published_articles = set()
 script_name = os.path.basename(__file__)
 logging.info("{:=^90}".format(" {} ".format(script_name)))
+
 # Chargement du fichier de conf
 logging.info('Chargement du fichier de configuration')
 current_dir = os.path.dirname(os.path.abspath(__file__))
 with open(f'{current_dir}/application.yml', 'r') as stream:
     config = yaml.safe_load(stream)
+
 # Récupération des titres déjà traités
 logging.info('Récupération des titres déjà traités')
-with open(f"{log_dir}/Twitos.log", "r") as f:
-    for line in f:
-        if "Titre article:" in line:
-            log_title = line.split("Titre article: ")[1].strip()
-            published_articles.add(log_title)
 
 published_articles = set()
 google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
+
+def article_is_published(articles_data_published: List[str], article_to_compare: str, tolerance: int = 50) -> bool:
+    logging.info(f'Lancement de la fonction article_is_published')
+    lemmatizer = WordNetLemmatizer()
+    tokens_to_compare = word_tokenize(article_to_compare)
+    lemmas_to_compare = [lemmatizer.lemmatize(token) for token in tokens_to_compare]
+    for article_published in articles_data_published:
+        tokens_published = word_tokenize(article_published)
+        lemmas_published = [lemmatizer.lemmatize(token) for token in tokens_published]
+        ratio = fuzz.ratio(' '.join(tokens_published), ' '.join(tokens_to_compare))
+        if ratio >= tolerance:
+            logging.info(f'Le ratio vaut : {ratio}, l\'article a déjà été publié')
+            return True
+        else:
+            logging.info(f'Le ratio vaut : {ratio}, l\'article n\'a pas été publié, on le publie')
+            return False
+
+def check_subject(subject: str):
+    logging.info(f'Lancement de la fonction check_subject avec le paramètre subject : {subject}')
+    subjects_list = ['etienne_klein','humeur_matin','humeur_soir','google_trends']
+    if subject not in subjects_list:
+        print('subject not autorized')
+        sys.exit(1)
+
+def get_articles(google_news, excluded_terms=None):
+    logging.info(f'Lancement de la fonction get_articles')
+    s = pyshorteners.Shortener()
+    if excluded_terms is None:
+        excluded_terms = []
+    if len(google_news) > 0:
+        for article in google_news[1:50]:
+            titre = article["title"]
+            if not safe_search(titre, 'title'):
+                print('Title not safe')
+                logging.info(f'L\'article {titre} a été rejeté')
+                continue
+            published_articles = get_published_articles()
+            published_articles = list(published_articles)
+            if article_is_published(published_articles, titre):
+                logging.info(f'L article {titre} a déjà été publié.')
+                continue
+            short_url = s.tinyurl.short(article["link"])
+            article_url = article["link"]
+            if not safe_search(article_url, 'url'):
+                logging.warning(f'L\'url contient des mots indterdits : {article_url}')
+                continue
+            logging.info(f'Titre article: {titre}')
+            logging.info(f"Date parution article : {article['date']}")
+            logging.info(f"Url article {article_url}")
+            article = Article(article_url)
+            try:
+                article.download()
+            except:
+                logging.error(f'Impossible de télécharger l\'article {article_url}')
+                continue
+            article.html
+            article.parse()
+            article_content = article.text
+            article_date = article.publish_date
+            formated_content = unidecode(article_content.replace(" ", "-").lower())
+            if not safe_search(formated_content, 'article_content'):
+                logging.info('Le contenu de l\'article contient des termes indterdits')
+                continue
+            return article_content, short_url
+        return None
+    else:
+        logging.warning(f"Aucun résultat n'a été trouvé pour la recherche")
+        return None
+
+def get_google_news(subject: str, lang: str = 'fr'):
+    logging.info(f'Lancement de la fonction get_google_news avec le paramètre subject : {subject}')
+    googlenews = GoogleNews(lang=lang, region="com", period='1d')
+    googlenews.search(subject)
+    googlenews = googlenews.result()
+    return googlenews
 
 def get_google_trends(url):
     logging.info(f'Lancement de la fonction get_google_trends avec le paramètre {url}')
@@ -74,23 +150,6 @@ def get_google_trends(url):
             "lien": link
         })
         return results[0]['titre']
-
-def launch_conditions(subject):
-    logging.info(f'Lancement de la fonction launch_conditions avec le paramètre {subject}')
-    if os.getenv("SHELL") == "/bin/sh":
-        logging.info(f"Le script est lancé par cron avec les paramètre {subject}.")
-    else:
-        logging.info(f"Le script est lancé manuellement avec les paramètre {subject}.")
-
-def tweepy_client():
-    logging.info(f'Lancement de la fonction tweepy_client')
-    logging.info('Set des varoables pour l API tweepy')
-    return tweepy.Client(
-        consumer_key = config['tweeter_keys']['consumer_key'],
-        consumer_secret = config['tweeter_keys']['consumer_secret'],
-        access_token = config['tweeter_keys']['access_token'],
-        access_token_secret = config['tweeter_keys']['access_token_secret']
-    )
 
 def get_gpt_response(prompt: str, temperature: float = 0.8):
     try:
@@ -123,80 +182,8 @@ def get_gpt_response(prompt: str, temperature: float = 0.8):
         logging.error(f"Erreur lors de l'appel à l'API OpenAI : {e}")
         return None
 
-def publish_tweet(client, tweet_content: str, short_url: str = None):
-    try:
-        logging.info(f'Lancement de la fonction publish_tweet avec le paramètre tweet_content:  {tweet_content} {short_url}')
-        if short_url is not None:
-            tweet_content += f" {short_url}"
-        tweet_c = tweet_content.replace('"', '')
-        tweet_content = tweet_c
-        logging.info(f"Publication du Tweet {tweet_content}")
-        response = client.create_tweet(text=tweet_content)
-        return response
-    except Exception as e:
-        logging.error(f"Erreur lors de la publication du Tweet {tweet_content}: {e}")
-        return None
-
-def article_is_published(articles_data_published: List[str], article_to_compare: str, tolerance: int = 50) -> bool:
-    logging.info(f'Lancement de la fonction article_published')
-    lemmatizer = WordNetLemmatizer()
-    tokens_to_compare = word_tokenize(article_to_compare)
-    lemmas_to_compare = [lemmatizer.lemmatize(token) for token in tokens_to_compare]
-    for article_published in articles_data_published:
-        tokens_published = word_tokenize(article_published)
-        lemmas_published = [lemmatizer.lemmatize(token) for token in tokens_published]
-        ratio = fuzz.ratio(' '.join(tokens_published), ' '.join(tokens_to_compare))
-        if ratio >= tolerance:
-            logging.info(f'Le ratio vaut : {ratio}, l\'article a déjà été publié')
-            return True
-        else:
-            logging.info(f'Le ratio vaut : {ratio}, l\'article n\'a pas été publié, on le publie')
-            return False
-
-def get_articles(google_news, excluded_terms=None):
-    logging.info(f'Lancement de la fonction get_articles')
-    s = pyshorteners.Shortener()
-    if excluded_terms is None:
-        excluded_terms = []
-    if len(google_news) > 0:
-        for article in google_news[1:50]:
-            titre = article["title"]
-            logging.info(f'Titre article: {titre}')
-            if not safe_search(titre):
-                continue
-            if article_is_published(published_articles, titre):
-                continue
-            else:
-                logging.info(f'L article {titre} a déjà été publié.')
-            short_url = s.tinyurl.short(article["link"])
-            article_url = article["link"]
-            if not safe_search(article_url):
-                continue
-            article = Article(article_url)
-            article.download()
-            article.html
-            article.parse()
-            article_content = article.text
-            formated_content = unidecode(article_content.replace(" ", "-").lower())
-            if not safe_search(formated_content):
-                continue
-            return article_content, short_url
-        return None
-    else:
-        logging.warning(f"Aucun résultat n'a été trouvé pour la recherche")
-        return None
-
-def get_subject():
-    logging.info(f'Lancement de la fonction get_subject')
-    subjects = config['subjects']
-    poids = [subjects[key]['weight'] for key in subjects]
-    chosen_subject = random.choices(list(subjects.keys()), weights=poids, k=1)[0]
-    logging.info(f"Sujet obtenu : {chosen_subject}")
-    return subjects[chosen_subject]['name']
-
 def get_prompt(article_content: str = None, subject: str = None):
     logging.info(f'Lancement de la fonction get_subject avec les paramètres article_content et subject : {subject}')
-    nb_days = (datetime.datetime.now() - datetime.datetime(2023, 4, 23)).days
     if subject == 'humeur_matin':
         prompt = config['chat-GPT']['prompts']['message_morning']
     elif subject == 'humeur_soir':
@@ -209,23 +196,48 @@ def get_prompt(article_content: str = None, subject: str = None):
         prompt = f"{config['chat-GPT']['prompts']['resume_article']}{article_content}"
     return prompt
 
-def get_google_news(subject: str):
-    logging.info(f'Lancement de la fonction get_google_news avec le paramètre subject : {subject}')
-    googlenews = GoogleNews(lang="en", region="com")
-    googlenews.search(subject)
-    google_news = googlenews.result()
-    return google_news
+def get_published_articles():
+    with open(f"{log_dir}/Twitos.log", "r") as f:
+        for line in f:
+            if "Titre article:" in line:
+                log_title = line.split("Titre article: ")[1].strip()
+                published_articles.add(log_title)
+    return published_articles
 
-def check_subject(subject: str):
-    logging.info(f'Lancement de la fonction check_subject avec le paramètre subject : {subject}')
-    subjects_list = ['etienne_klein','humeur_matin','humeur_soir','google_trends']
-    if subject not in subjects_list:
-        print('subject not autorized')
-        sys.exit(1)
+def get_subject():
+    logging.info(f'Lancement de la fonction get_subject')
+    subjects = config['subjects']
+    poids = [subjects[key]['weight'] for key in subjects]
+    chosen_subject = random.choices(list(subjects.keys()), weights=poids, k=1)[0]
+    logging.info(f"Sujet obtenu : {chosen_subject}")
+    return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
-def safe_search(search: str):
+def launch_conditions(subject):
+    logging.info(f'Lancement de la fonction launch_conditions avec le paramètre {subject}')
+    if os.getenv("SHELL") == "/bin/sh":
+        logging.info(f"Le script est lancé par cron avec les paramètre {subject}.")
+    else:
+        logging.info(f"Le script est lancé manuellement avec les paramètre {subject}.")
+
+def publish_tweet(client, tweet_content: str, short_url: str = None):
+    try:
+        logging.info(f'Lancement de la fonction publish_tweet avec le paramètre tweet_content:  {tweet_content} {short_url}')
+        if short_url is not None:
+            tweet_content += f" {short_url}"
+        tweet_c = tweet_content.replace('"', '')
+        tweet_content = tweet_c
+        lenght_tweet = len(tweet_content)
+        logging.info(f"Publication du Tweet {tweet_content}")
+        logging.info(f"Longueur du tweet : {lenght_tweet}")
+        response = client.create_tweet(text=tweet_content)
+        return response
+    except Exception as e:
+        logging.error(f"Erreur lors de la publication du Tweet {tweet_content}: {e}")
+        return None
+
+def safe_search(search: str, type_search: str = ''):
     excluded_terms = config['excluded_terms']
-    logging.info(f'Lancement de la fonction safe_search avec le paramètre search')
+    logging.info(f'Lancement de la fonction safe_search avec le paramètre {type_search}')
     excluded_terms_check = [unidecode(term.replace(" ", "-").lower()) for term in excluded_terms]
     search_safer = unidecode(search.replace(" ", "-").lower())
     if any(term in search_safer for term in excluded_terms_check):
@@ -233,26 +245,36 @@ def safe_search(search: str):
     else:
         return True
 
+def tweepy_client():
+    logging.info(f'Lancement de la fonction tweepy_client')
+    logging.info('Set des varoables pour l API tweepy')
+    return tweepy.Client(
+        consumer_key = config['tweeter_keys']['consumer_key'],
+        consumer_secret = config['tweeter_keys']['consumer_secret'],
+        access_token = config['tweeter_keys']['access_token'],
+        access_token_secret = config['tweeter_keys']['access_token_secret']
+    )
+
 def main():
     try:
         short_url = None
         if len(sys.argv) < 2:
-            subject = get_subject()
+            subject, lang = get_subject()
             search_activated = True
         else:
             subject = " ".join(sys.argv[1:])
             check_subject(subject)
             search_activated = False
             if subject == 'etienne_klein':
-                sujbect = 'etienne +klein'
+                sujbect = 'etienne klein'
                 search_activated = True
             elif subject == 'google_trends':
                 subject = get_google_trends(google_trend_rss)
                 search_activated = True
         launch_conditions(subject)
-        if safe_search(subject):
+        if safe_search(subject, 'subject'):
             if search_activated:
-                google_news = get_google_news(subject)
+                google_news = get_google_news(subject, lang)
                 article_content, short_url = get_articles(google_news)
             else:
                 article_content = None
