@@ -22,8 +22,6 @@ from nltk.tokenize import word_tokenize
 import feedparser
 import yaml
 
-
-
 # Création du répertoire de log s'il n'existe pas
 log_dir = "/var/log/twittos"
 if not os.path.exists(log_dir):
@@ -41,8 +39,8 @@ logging.info("{:=^90}".format(" {} ".format(script_name)))
 # Chargement du fichier de conf
 logging.info('Chargement du fichier de configuration')
 current_dir = os.path.dirname(os.path.abspath(__file__))
-with open(f'{current_dir}/lerobotkitweet.yml', 'r') as stream:
-     config = yaml.safe_load(stream)
+with open(f'{current_dir}/application.yml', 'r') as stream:
+    config = yaml.safe_load(stream)
 # Récupération des titres déjà traités
 logging.info('Récupération des titres déjà traités')
 with open(f"{log_dir}/Twitos.log", "r") as f:
@@ -97,7 +95,7 @@ def tweepy_client():
 def get_gpt_response(prompt: str, temperature: float = 0.8):
     try:
         logging.info(f'Lancement de la fonction get_gpt_response avec les paramètre prompt et temerature: {temperature}')
-        OPENAI_API_KEY = config['openai_key']
+        OPENAI_API_KEY = config['chat-GPT']['openai_key']
         url = "https://api.openai.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
@@ -108,13 +106,13 @@ def get_gpt_response(prompt: str, temperature: float = 0.8):
             "messages": [
                 {
                     "role": "sytem",
-                    "content": "Tu es influenceur Tweeter. Tu matrises le SEO. Tes réponses doivent faire 3 phrases, 250 caractères",
+                    "content": config['chat-GPT']['message']['content'],
                     "role": "user",
                     "content": prompt,
                 }
             ],
             "temperature": temperature,
-            "max_tokens": 60,
+            "max_tokens": config['chat-GPT']['max_tokens'],
         }
         logging.info("Appel de l API GPT")
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -169,7 +167,7 @@ def get_articles(google_news, excluded_terms=None):
             if article_is_published(published_articles, titre):
                 continue
             else:
-                logging.info(f'Larticle {titre} a déjà été publié.')
+                logging.info(f'L article {titre} a déjà été publié.')
             short_url = s.tinyurl.short(article["link"])
             article_url = article["link"]
             if not safe_search(article_url):
@@ -193,21 +191,22 @@ def get_subject():
     subjects = config['subjects']
     poids = [subjects[key]['weight'] for key in subjects]
     chosen_subject = random.choices(list(subjects.keys()), weights=poids, k=1)[0]
+    logging.info(f"Sujet obtenu : {chosen_subject}")
     return subjects[chosen_subject]['name']
 
 def get_prompt(article_content: str = None, subject: str = None):
     logging.info(f'Lancement de la fonction get_subject avec les paramètres article_content et subject : {subject}')
     nb_days = (datetime.datetime.now() - datetime.datetime(2023, 4, 23)).days
     if subject == 'humeur_matin':
-        prompt = "Ecris un tweet 3 phrases courtes, avec des émoticones. Tu dois donner la bonne humeur, le smile et la motivation pour cette journée. Ton tweet doit OBLIGATOIREMENT commencer par #SalutLesTerriens et se termier par 3 ou 4 hashtags. Il doit se terminer par le hashtag LeRobotKiTweet"
+        prompt = config['chat-GPT']['prompts']['message_morning']
     elif subject == 'humeur_soir':
-        prompt = f"Tu es LeRobotKiTweet, un petit robot intergalactique qui est arrivé dans notre monde depuis {nb_days} jours. C' est la fin de la journéer. Ecris un twwet de trois phrases courtes où tu  donnes ton point de vue, tes sentiments, tu as le droit d'être nostalgique, mais ton message doit être positif. Ecris un tweet de 3 phrases courtes avec des émoticonesi pour terminer en beauté cette journée. Ton tweet doit OBLIGATOIREMENT commencer par #BonneNuitLesTerriens et se termier par 3 ou 4 hashtags le derbier doit etre  LeRobotKiTweet. IL NE DOIT PAS CONTENIR PLUS DE 250 CARACTERES"
+        prompt = config['chat-GPT']['prompts']['message_evening']
     elif subject == 'etienne_klein':
-        prompt = f"Ecris un tweet dans le style de Etienne Klein de 3 phrases résumant l'article suivant. Il doit contenir des emoticones et des hashtags. Ajoute après les hashtags @EtienneKlein  : {article_content}"
-    elif subject == 'Too_long':
-        prompt = f"Le tweet suivant est trop long, raccourcis le en gardabs des hashtags ainsi que les emoticones, je serai déçu s'il dépassait 250 caractères : {article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['etienne_klein']}{article_content}"
+    elif subject == 'too_long':
+        prompt = f"{config['chat-GPT']['prompts']['too_long']}{article_content}"
     else:
-        prompt = f"Ecris un tweet en français de 3 phrases, avec les émoticones appropriées. Le texte doit être très court. Le tweet doit être aguicheur, je serai deçu s'il dépassait 250 caractères, contenir 3 ou 4 hashtag et traiter le subject suivant : {article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['resume_article']}{article_content}"
     return prompt
 
 def get_google_news(subject: str):
@@ -226,7 +225,7 @@ def check_subject(subject: str):
 
 def safe_search(search: str):
     excluded_terms = config['excluded_terms']
-    logging.info(f'Lancement de la fonction safe_search avec le paramètre search : {search}')
+    logging.info(f'Lancement de la fonction safe_search avec le paramètre search')
     excluded_terms_check = [unidecode(term.replace(" ", "-").lower()) for term in excluded_terms]
     search_safer = unidecode(search.replace(" ", "-").lower())
     if any(term in search_safer for term in excluded_terms_check):
@@ -262,12 +261,13 @@ def main():
         prompt = get_prompt(article_content, subject)
         client = tweepy_client()
         tweet = get_gpt_response(prompt)
-        max_tweet_length = 260
+        max_tweet_length = 256
         max_attempts = 3
         attempts = 0
         while len(tweet) > max_tweet_length and attempts < max_attempts:
             logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
             get_prompt(tweet, 'too_long')
+            tweet = get_gpt_response(prompt)
             attempts += 1
         if len(tweet) > max_tweet_length:
             logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
