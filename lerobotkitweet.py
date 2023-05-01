@@ -58,16 +58,18 @@ def article_is_published(articles_data_published: List[str], article_to_compare:
     lemmatizer = WordNetLemmatizer()
     tokens_to_compare = word_tokenize(article_to_compare)
     lemmas_to_compare = [lemmatizer.lemmatize(token) for token in tokens_to_compare]
+    i = 0
     for article_published in articles_data_published:
         tokens_published = word_tokenize(article_published)
         lemmas_published = [lemmatizer.lemmatize(token) for token in tokens_published]
         ratio = fuzz.ratio(' '.join(tokens_published), ' '.join(tokens_to_compare))
+        i += 1
+        logging.debug(f'Ratio ID #{i}: {ratio}')
         if ratio >= tolerance:
             logging.info(f'Le ratio vaut : {ratio}, l\'article a déjà été publié')
             return True
-        else:
-            logging.info(f'Le ratio vaut : {ratio}, l\'article n\'a pas été publié, on le publie')
-            return False
+    logging.info(f'Le ratio vaut : {ratio}, l\'article n\'a pas été publié, on le publie')
+    return False
 
 
 def check_subject(subject: str):
