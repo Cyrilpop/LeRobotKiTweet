@@ -25,8 +25,6 @@ import feedparser
 nltk.download('punkt', quiet=True)
 nltk.download('wordnet', quiet=True)
 
-
-
 # Création du répertoire de log s'il n'existe pas
 log_dir = "/var/log/leRobotKiTweet"
 if not os.path.exists(log_dir):
@@ -54,6 +52,7 @@ logging.info('Récupération des titres déjà traités')
 published_articles = set()
 google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
+
 def article_is_published(articles_data_published: List[str], article_to_compare: str, tolerance: int = 50) -> bool:
     logging.info(f'Lancement de la fonction article_is_published')
     lemmatizer = WordNetLemmatizer()
@@ -70,12 +69,14 @@ def article_is_published(articles_data_published: List[str], article_to_compare:
             logging.info(f'Le ratio vaut : {ratio}, l\'article n\'a pas été publié, on le publie')
             return False
 
+
 def check_subject(subject: str):
     logging.info(f'Lancement de la fonction check_subject avec le paramètre subject : {subject}')
-    subjects_list = ['etienne_klein','humeur_matin','humeur_soir','google_trends']
+    subjects_list = ['etienne_klein', 'humeur_matin', 'humeur_soir', 'google_trends']
     if subject not in subjects_list:
         print('subject not autorized')
         sys.exit(1)
+
 
 def get_articles(google_news, excluded_terms=None):
     logging.info(f'Lancement de la fonction get_articles')
@@ -122,12 +123,14 @@ def get_articles(google_news, excluded_terms=None):
         logging.warning(f"Aucun résultat n'a été trouvé pour la recherche")
         return None
 
+
 def get_google_news(subject: str, lang: str = 'fr'):
     logging.info(f'Lancement de la fonction get_google_news avec le paramètre subject : {subject}')
     googlenews = GoogleNews(lang=lang, region="com", period='1d')
     googlenews.search(subject)
     googlenews = googlenews.result()
     return googlenews
+
 
 def get_google_trends(url):
     logging.info(f'Lancement de la fonction get_google_trends avec le paramètre {url}')
@@ -151,6 +154,7 @@ def get_google_trends(url):
             "lien": link
         })
         return results[0]['titre']
+
 
 def get_gpt_response(prompt: str, temperature: float = 0.8):
     try:
@@ -183,6 +187,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8):
         logging.error(f"Erreur lors de l'appel à l'API OpenAI : {e}")
         return None
 
+
 def get_prompt(article_content: str = None, subject: str = None):
     logging.info(f'Lancement de la fonction get_subject avec les paramètres article_content et subject : {subject}')
     if subject == 'humeur_matin':
@@ -197,6 +202,7 @@ def get_prompt(article_content: str = None, subject: str = None):
         prompt = f"{config['chat-GPT']['prompts']['resume_article']}{article_content}"
     return prompt
 
+
 def get_published_articles():
     with open(f"{log_dir}/Twitos.log", "r") as f:
         for line in f:
@@ -204,6 +210,7 @@ def get_published_articles():
                 log_title = line.split("Titre article: ")[1].strip()
                 published_articles.add(log_title)
     return published_articles
+
 
 def get_subject():
     logging.info(f'Lancement de la fonction get_subject')
@@ -213,12 +220,14 @@ def get_subject():
     logging.info(f"Sujet obtenu : {chosen_subject}")
     return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
+
 def launch_conditions(subject):
     logging.info(f'Lancement de la fonction launch_conditions avec le paramètre {subject}')
     if os.getenv("SHELL") == "/bin/sh":
         logging.info(f"Le script est lancé par cron avec les paramètre {subject}.")
     else:
         logging.info(f"Le script est lancé manuellement avec les paramètre {subject}.")
+
 
 def publish_tweet(client, tweet_content: str, short_url: str = None):
     try:
@@ -236,6 +245,7 @@ def publish_tweet(client, tweet_content: str, short_url: str = None):
         logging.error(f"Erreur lors de la publication du Tweet {tweet_content}: {e}")
         return None
 
+
 def safe_search(search: str, type_search: str = ''):
     excluded_terms = config['excluded_terms']
     logging.info(f'Lancement de la fonction safe_search avec le paramètre {type_search}')
@@ -246,6 +256,7 @@ def safe_search(search: str, type_search: str = ''):
     else:
         return True
 
+
 def tweepy_client():
     logging.info(f'Lancement de la fonction tweepy_client')
     logging.info('Set des varoables pour l API tweepy')
@@ -255,6 +266,7 @@ def tweepy_client():
         access_token = config['tweeter_keys']['access_token'],
         access_token_secret = config['tweeter_keys']['access_token_secret']
     )
+
 
 def main():
     try:
@@ -267,10 +279,12 @@ def main():
             check_subject(subject)
             search_activated = False
             if subject == 'etienne_klein':
+                lang = config['subjects_custum']['etienne_klein']['lang']
                 sujbect = 'etienne klein'
                 search_activated = True
             elif subject == 'google_trends':
                 subject = get_google_trends(google_trend_rss)
+                lang = config['subjects_custum']['google_trends']['lang']
                 search_activated = True
         launch_conditions(subject)
         if safe_search(subject, 'subject'):
@@ -289,7 +303,7 @@ def main():
         attempts = 0
         while len(tweet) > max_tweet_length and attempts < max_attempts:
             logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
-            get_prompt(tweet, 'too_long')
+            prompt = get_prompt(tweet, 'too_long')
             tweet = get_gpt_response(prompt)
             attempts += 1
         if len(tweet) > max_tweet_length:
@@ -299,6 +313,7 @@ def main():
     except Exception as e:
         logging.error(f"Une erreur critique s'est produite : {e}")
         pass
+
 
 if __name__ == "__main__":
     main()
