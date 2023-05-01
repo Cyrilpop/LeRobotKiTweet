@@ -9,9 +9,9 @@ pip3 install -r requirement.txt
 ```
 ### Edit script to fill your information
 ```shell
-vim ./lerobotkitweet.py
+vim ./application.yml
 ```
-### Edit application.yml find and replace with your own informations from tweeter developper
+#### Find and replace with your own informations from tweeter developper
 ```yml
 tweeter_keys:
   consumer_key: YOUR_KEY
@@ -19,7 +19,7 @@ tweeter_keys:
   access_token: YOUR_KEY
   access_token_secret: YOUR_KEY
 ```
-### Edit application.yml find and replace with your ownopenai key
+#### Find and replace with your ownopenai key
 ```yml
 chat-GPT:
   max_tokens: 80
