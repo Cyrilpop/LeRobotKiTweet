@@ -1,32 +1,36 @@
 #!/usr/bin/env python3
 # Imports du module standard Python
-import json
 import logging
 import os
 import random
 import sys
-
-from difflib import SequenceMatcher
-import feedparser
-import nltk
-import pyshorteners
+from datetime import datetime, timedelta
 
 # Imports de modules externes
 import requests
-import tweepy
+import json
 import yaml
-from GoogleNews import GoogleNews
-from newspaper import Article
+import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from unidecode import unidecode
+from fuzzywuzzy import fuzz
+from GoogleNews import GoogleNews
+from newspaper import Article
+import tweepy
+import feedparser
+from difflib import SequenceMatcher
+
+
 
 # Téléchargements de données pour nltk
 nltk.download('punkt', quiet=True)
 nltk.download('wordnet', quiet=True)
 
-# Création du répertoire de log s'il n'existe pas
 log_dir = "/var/log/leRobotKiTweet"
+script_name = os.path.basename(__file__)
+
+# Création du répertoire de log s'il n'existe pas
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
@@ -36,8 +40,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
-
-script_name = os.path.basename(__file__)
 logging.info("{:=^90}".format(" {} ".format(script_name)))
 
 # Chargement du fichier de conf
@@ -58,6 +60,7 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
     :param comparison_type: Type de comparaison à effectuer ('title', 'url' ou 'content').
     :return: True si l'article a été publié, False sinon.
     """
+    tolerance = float(tolerance) / 100
     logging.info(f'Lancement de la fonction article_is_published pour {comparison_type}')
     with open(f'{current_dir}/articles.json', 'r') as f:
         data = json.load(f)
@@ -78,19 +81,18 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
 
 def check_subject(subject: str):
     logging.info(f'Lancement de la fonction check_subject avec le paramètre subject : {subject}')
-    subjects_list = ['etienne_klein', 'humeur_matin', 'humeur_soir', 'google_trends']
+    subjects_list = ['etienne_klein', 'humeur_matin', 'humeur_soir', 'google_trends', 'cinema']
     if subject not in subjects_list:
-        print('subject not autorized')
+        print('subject not authorized')
         sys.exit(1)
 
 
 def get_articles(google_news, excluded_terms=None):
     logging.info(f'Lancement de la fonction get_articles')
-    s = pyshorteners.Shortener()
     if excluded_terms is None:
         excluded_terms = []
     if len(google_news) > 0:
-        for article in google_news[1:50]:
+        for article in google_news[1:99]:
             article_title = article["title"]
             if not safe_search(article_title, 'title'):
                 print('Title not safe')
@@ -99,7 +101,6 @@ def get_articles(google_news, excluded_terms=None):
             if article_is_published(article_title, 50, 'title'):
                 logging.info(f'L article {article_title} a déjà été publié.')
                 continue
-            short_url = s.tinyurl.short(article["link"])
             article_url = article["link"]
             if not safe_search(article_url, 'url'):
                 logging.warning(f'L\'url contient des mots indterdits : {article_url}')
@@ -115,7 +116,7 @@ def get_articles(google_news, excluded_terms=None):
                 continue
             article.html
             article.parse()
-            article_content = article.text.encode().decode('unicode_escape')
+            article_content = article.text
             if article_is_published(article_content, 20, 'content'):
                 logging.warning(f'L\'article {article_title} a déjà até publié')
                 continue
@@ -124,7 +125,7 @@ def get_articles(google_news, excluded_terms=None):
             if not safe_search(formated_content, 'article_content'):
                 logging.info('Le contenu de l\'article contient des termes indterdits')
                 continue
-            return article_title, short_url, article_url, article_date, article_content
+            return article_title, article_url, article_url, article_date, article_content
         return None
     else:
         logging.warning(f"Aucun résultat n'a été trouvé pour la recherche")
@@ -202,6 +203,8 @@ def get_prompt(article_content: str = None, subject: str = None):
         prompt = config['chat-GPT']['prompts']['message_morning']
     elif subject == 'humeur_soir':
         prompt = config['chat-GPT']['prompts']['message_evening']
+    elif subject == 'cinema':
+        prompt = f"{config['chat-GPT']['prompts']['cinema']}{article_content}"
     elif subject == 'etienne_klein':
         prompt = f"{config['chat-GPT']['prompts']['etienne_klein']}{article_content}"
     elif subject == 'too_long':
@@ -209,16 +212,6 @@ def get_prompt(article_content: str = None, subject: str = None):
     else:
         prompt = f"{config['chat-GPT']['prompts']['resume_article']}{article_content}"
     return prompt
-
-
-def get_published_article_titles():
-    with open(f"{log_dir}/Twitos.log", "r") as f:
-        for line in f:
-            if "Titre article:" in line:
-                log_title = line.split("Titre article: ")[1].strip()
-                published_article_titles.add(log_title)
-    return published_article_titles
-
 
 def get_subject():
     logging.info(f'Lancement de la fonction get_subject')
@@ -237,11 +230,11 @@ def launch_conditions(subject):
         logging.info(f"Le script est lancé manuellement avec les paramètre {subject}.")
 
 
-def publish_tweet(client, tweet_content: str, short_url: str = None):
+def publish_tweet(client, tweet_content: str, article_url: str = None):
     try:
-        logging.info(f'Lancement de la fonction publish_tweet avec les paramètres client, tweet_content, short_url')
-        if short_url is not None:
-            tweet_content += f" {short_url}"
+        logging.info(f'Lancement de la fonction publish_tweet avec les paramètres client, tweet_content, article_url')
+        if article_url is not None:
+            tweet_content += f" {article_url}"
         tweet_c = tweet_content.replace('"', '')
         tweet_content = tweet_c
         lenght_tweet = len(tweet_content)
@@ -281,7 +274,7 @@ def safe_search(search: str, type_search: str = ''):
 
 def tweepy_client():
     logging.info(f'Lancement de la fonction tweepy_client')
-    logging.info('Set des varoables pour l API tweepy')
+    logging.info('Set des variables pour l API tweepy')
     return tweepy.Client(
         consumer_key=config['tweeter_keys']['consumer_key'],
         consumer_secret=config['tweeter_keys']['consumer_secret'],
@@ -292,7 +285,7 @@ def tweepy_client():
 
 def main():
     try:
-        short_url = None
+        article_url = None
         if len(sys.argv) < 2:
             subject, lang = get_subject()
             search_activated = True
@@ -304,6 +297,15 @@ def main():
                 lang = config['subjects_custom']['etienne_klein']['lang']
                 sujbect = 'etienne klein'
                 search_activated = True
+            elif subject == 'cinema':
+                today = datetime.today()
+                days_ahead = (2 - today.weekday()) % 7
+                next_wednesday = today + timedelta(days=days_ahead)
+                next_cinema = next_wednesday.strftime('%-d %B %Y')
+                sys.exit
+                lang = config['subjects_custom']['cinema']['lang']
+                subject = f"allocine.fr sortie films cinema du {next_cinema}"
+                search_activated = True
             elif subject == 'google_trends':
                 subject = get_google_trends(google_trend_rss)
                 lang = config['subjects_custom']['google_trends']['lang']
@@ -312,7 +314,7 @@ def main():
         if safe_search(subject, 'subject'):
             if search_activated:
                 google_news = get_google_news(subject, lang)
-                article_title, short_url, article_url, article_date, article_content = get_articles(google_news)
+                article_title, article_url, article_url, article_date, article_content = get_articles(google_news)
             else:
                 article_content = None
         else:
@@ -333,7 +335,7 @@ def main():
         if len(tweet) > max_tweet_length:
             logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
         else:
-            publish_tweet(client, tweet, short_url)
+            publish_tweet(client, tweet, article_url)
     except Exception as e:
         logging.error(f"Une erreur critique s'est produite : {e}")
         pass
