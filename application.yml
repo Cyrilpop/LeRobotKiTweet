@@ -24,6 +24,12 @@ subjects:
     name: NASA
     weight: 1
 
+subjects_custom:
+  etienne_klein:
+    lang: fr
+  google_trends:
+   lang: fr
+
 tweeter_keys:
   consumer_key: YOUR_KEY_HERE
   consumer_secret: YOUR_KEY_HERE
