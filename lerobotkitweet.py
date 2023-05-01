@@ -279,12 +279,12 @@ def main():
             check_subject(subject)
             search_activated = False
             if subject == 'etienne_klein':
-                lang = config['subjects_custum']['etienne_klein']['lang']
+                lang = config['subjects_custom']['etienne_klein']['lang']
                 sujbect = 'etienne klein'
                 search_activated = True
             elif subject == 'google_trends':
                 subject = get_google_trends(google_trend_rss)
-                lang = config['subjects_custum']['google_trends']['lang']
+                lang = config['subjects_custom']['google_trends']['lang']
                 search_activated = True
         launch_conditions(subject)
         if safe_search(subject, 'subject'):
