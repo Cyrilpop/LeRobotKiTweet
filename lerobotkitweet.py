@@ -319,16 +319,18 @@ def main():
                 article_content = None
         else:
             sys.exit()
-        push_article_json(article_title, article_url, article_content)
+        if subject not in ['humeur_soir', 'humeur_matin']:
+            push_article_json(article_title, article_url, article_content)
         prompt = get_prompt(article_content, subject)
         client = tweepy_client()
         tweet = get_gpt_response(prompt)
-        max_tweet_length = 256
+        max_tweet_length = 250
         max_attempts = 3
         attempts = 0
         while len(tweet) > max_tweet_length and attempts < max_attempts:
             logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
             prompt = get_prompt(tweet, 'too_long')
+            logging.warning(f"Longueur Tweet : {len(tweet)}")
             logging.warning(f"Le nouveau prompt est {prompt}")
             tweet = get_gpt_response(prompt)
             attempts += 1
