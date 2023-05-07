@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # Imports du module standard Python
+import locale
 import logging
 import os
 import random
 import sys
 from datetime import datetime, timedelta
+import datetime
 
 # Imports de modules externes
 import requests
@@ -298,13 +300,14 @@ def main():
                 sujbect = 'etienne klein'
                 search_activated = True
             elif subject == 'cinema':
-                today = datetime.today()
+                locale.setlocale(locale.LC_ALL, 'fr_FR.utf8')
+                today = datetime.date.today()
                 days_ahead = (2 - today.weekday()) % 7
-                next_wednesday = today + timedelta(days=days_ahead)
-                next_cinema = next_wednesday.strftime('%-d %B %Y')
-                sys.exit
+                next_wednesday = today + datetime.timedelta(days=days_ahead)
+                next_cinema = next_wednesday.strftime('%d %B %Y')
+
                 lang = config['subjects_custom']['cinema']['lang']
-                subject = f"allocine.fr sortie films cinema du {next_cinema}"
+                subject = f"sorties cinema {next_cinema}"
                 search_activated = True
             elif subject == 'google_trends':
                 subject = get_google_trends(google_trend_rss)
@@ -324,7 +327,7 @@ def main():
         prompt = get_prompt(article_content, subject)
         client = tweepy_client()
         tweet = get_gpt_response(prompt)
-        max_tweet_length = 250
+        max_tweet_length = 255
         max_attempts = 3
         attempts = 0
         while len(tweet) > max_tweet_length and attempts < max_attempts:
