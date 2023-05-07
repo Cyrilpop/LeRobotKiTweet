@@ -16,6 +16,10 @@ excluded_terms:
   - word 1
   - word 2
 
+loggin:
+  dir_name: /var/log/leRobotKiTweet
+  file_name: Twitos.log
+
 subjects:
   sciences:
     name: sciences
