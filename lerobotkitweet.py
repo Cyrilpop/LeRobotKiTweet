@@ -24,12 +24,19 @@ import feedparser
 from difflib import SequenceMatcher
 
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Chargement du fichier de conf
+with open(f'{current_dir}/application.yml', 'r') as stream:
+    config = yaml.safe_load(stream)
+
+log_dir = config['logging']['dir_name']
+log_name = config['logging']['file_name']
+
 
 # Téléchargements de données pour nltk
 nltk.download('punkt', quiet=True)
 nltk.download('wordnet', quiet=True)
 
-log_dir = "/var/log/leRobotKiTweet"
 script_name = os.path.basename(__file__)
 
 # Création du répertoire de log s'il n'existe pas
@@ -38,17 +45,11 @@ if not os.path.exists(log_dir):
 
 # Configuration du logging
 logging.basicConfig(
-    filename=f"{log_dir}/Twitos.log",
+    filename=f"{log_dir}/{log_name}",
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
 logging.info("{:=^90}".format(" {} ".format(script_name)))
-
-# Chargement du fichier de conf
-logging.info('Chargement du fichier de configuration')
-current_dir = os.path.dirname(os.path.abspath(__file__))
-with open(f'{current_dir}/application.yml', 'r') as stream:
-    config = yaml.safe_load(stream)
 
 google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
