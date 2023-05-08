@@ -22,7 +22,7 @@ from newspaper import Article
 import tweepy
 import feedparser
 from difflib import SequenceMatcher
-
+import numpy as np
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # Chargement du fichier de conf
@@ -84,7 +84,7 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
 
 def check_subject(subject: str):
     logging.info(f'Lancement de la fonction check_subject avec le paramètre subject : {subject}')
-    subjects_list = ['etienne_klein', 'humeur_matin', 'humeur_soir', 'google_trends', 'cinema']
+    subjects_list = subjects_list = list(config['subjects_custom'].keys())
     if subject not in subjects_list:
         print('subject not authorized')
         sys.exit(1)
@@ -224,6 +224,27 @@ def get_subject():
     logging.info(f"Sujet obtenu : {chosen_subject}")
     return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
+def get_twitter_trends():
+    url = "https://www.twitter-trending.com/rss/feed?c=france&gmt_z=Europe/Paris&l=fr"
+    feed = feedparser.parse(url)
+    items = [[]]
+    last_title = feed.entries[0].title
+    for entry in feed.entries:
+        title = entry.title
+        content = entry.content[0].value
+        content = content.replace('<p>', '').replace('</p>', '')
+        items_list = content.split(') ')
+        items_list = [item.replace("#", "") for item in items_list]
+        items_list[-1] = items_list[-1].replace('..[top50]', '').strip()
+        items_list = [f"{item.rsplit(' ', 1)[0]}" for item in items_list]
+        if title != last_title:
+            last_title = title
+            items.append(items_list[1:])
+        else:
+            items[-1] += items_list[1:]
+    trends = [f"Trend_{i*30}" for i in range(len(items))]
+    trend_arrays = [np.array(items[i]) for i in range(len(trends))]
+    return trend_arrays
 
 def launch_conditions(subject):
     logging.info(f'Lancement de la fonction launch_conditions avec le paramètre {subject}')
@@ -289,6 +310,7 @@ def tweepy_client():
 def main():
     try:
         article_url = None
+        hashtag = ""
         if len(sys.argv) < 2:
             subject, lang = get_subject()
             search_activated = True
@@ -314,6 +336,10 @@ def main():
                 subject = get_google_trends(google_trend_rss)
                 lang = config['subjects_custom']['google_trends']['lang']
                 search_activated = True
+            elif subject == 'twitter_trends':
+                trends_array = get_twitter_trends()
+                hashtag = f" #{trends_array[0][0].replace(' ', '')}"
+                subject, lang, search_activated = trends_array[0][0], config['subjects_custom']['twitter_trends']['lang'], True
         launch_conditions(subject)
         if safe_search(subject, 'subject'):
             if search_activated:
@@ -327,21 +353,24 @@ def main():
             push_article_json(article_title, article_url, article_content)
         prompt = get_prompt(article_content, subject)
         client = tweepy_client()
-        tweet = get_gpt_response(prompt)
-        max_tweet_length = 255
-        max_attempts = 3
-        attempts = 0
-        while len(tweet) > max_tweet_length and attempts < max_attempts:
-            logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
-            prompt = get_prompt(tweet, 'too_long')
-            logging.warning(f"Longueur Tweet : {len(tweet)}")
-            logging.warning(f"Le nouveau prompt est {prompt}")
-            tweet = get_gpt_response(prompt)
-            attempts += 1
-        if len(tweet) > max_tweet_length:
-            logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
+        tweet = f"{get_gpt_response(prompt)}{hashtag}"
+        if tweet is not 'None':
+            max_tweet_length = 250
+            max_attempts = 3
+            attempts = 0
+            while len(tweet) > max_tweet_length and attempts < max_attempts:
+                logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
+                prompt = get_prompt(tweet, 'too_long')
+                logging.warning(f"Longueur Tweet : {len(tweet)}")
+                logging.warning(f"Le nouveau prompt est {prompt}")
+                tweet = get_gpt_response(prompt)
+                attempts += 1
+            if len(tweet) > max_tweet_length:
+                logging.warning(f"Impossible de tweeter : {tweet} (longueur : {len(tweet)})")
+            else:
+                publish_tweet(client, tweet, article_url)
         else:
-            publish_tweet(client, tweet, article_url)
+            logging.info("Le tweet est vide !")
     except Exception as e:
         logging.error(f"Une erreur critique s'est produite : {e}")
         pass
