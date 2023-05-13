@@ -18,6 +18,7 @@ from nltk.tokenize import word_tokenize
 from unidecode import unidecode
 from GoogleNews import GoogleNews
 from newspaper import Article
+from newspaper.article import ArticleException
 import tweepy
 import feedparser
 from difflib import SequenceMatcher
