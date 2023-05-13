@@ -36,5 +36,5 @@ chat-GPT:
 ```
 ## Usage
 ```shell
-./lerobotkitweet.py [empty|subject_custom]
+./lerobotkitweet.py [empty|-s subject_custom]
 ```
