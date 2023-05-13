@@ -81,6 +81,9 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
     return False
 
 
+from newspaper import Article, ArticleException
+import logging
+
 def get_articles(google_news, excluded_terms=None):
     logging.info(f"Function get_articles : lancement")
     logging.info(f"Function get_articles : paramètre google_news")
@@ -103,17 +106,20 @@ def get_articles(google_news, excluded_terms=None):
             logging.info(f"Function get_articles : titre article: {article_title}")
             logging.info(f"Function get_articles : date parution article : {article['date']}")
             logging.info(f"Function get_articles : URL article : {article_url}")
-            article = Article(article_url)
             try:
+                article = Article(article_url)
                 article.download()
-            except:
-                logging.error(f"Function get_articles : Impossible de télécharger {article_url}")
+                article.parse()
+                article.html
+                article_content = article.text
+                article_date = article.publish_date
+                formated_content = unidecode(article_content.replace(" ", "-").lower())
+            except ArticleException as ae:
+                logging.error(f"Function get_articles : Erreur de traitement de l'article : {article_url}. ArticleException : {ae}")
                 continue
-            article.html
-            article.parse()
-            article_content = article.text
-            article_date = article.publish_date
-            formated_content = unidecode(article_content.replace(" ", "-").lower())
+            except Exception as e:
+                logging.error(f"Function get_articles : Erreur de traitement de l'article : {article_url}. Erreur : {e}")
+                continue
             if not safe_search(formated_content):
                 logging.info("Function get_articles : le contenu de l'article a été rejeté (contenu)")
                 continue
