@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # Imports du module standard Python
 import argparse
+import datetime
 import locale
 import logging
 import os
 import random
 import sys
-from datetime import datetime, timedelta
-import datetime
 
 # Imports de modules externes
 import requests
@@ -17,7 +16,6 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from unidecode import unidecode
-from fuzzywuzzy import fuzz
 from GoogleNews import GoogleNews
 from newspaper import Article
 import tweepy
@@ -25,20 +23,20 @@ import feedparser
 from difflib import SequenceMatcher
 import numpy as np
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Chargement du fichier de conf
-with open(f'{current_dir}/application.yml', 'r') as stream:
-    config = yaml.safe_load(stream)
-
-log_dir = config['logging']['dir_name']
-log_name = config['logging']['file_name']
-
-
 # Téléchargements de données pour nltk
 nltk.download('punkt', quiet=True)
 nltk.download('wordnet', quiet=True)
 
+# Variables for log
+current_dir = os.path.dirname(os.path.abspath(__file__))
+with open(f'{current_dir}/application.yml', 'r') as stream:
+    config = yaml.safe_load(stream)
+log_dir = config['logging']['dir_name']
+log_name = config['logging']['file_name']
 script_name = os.path.basename(__file__)
+
+# Variables globals
+google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
 # Création du répertoire de log s'il n'existe pas
 if not os.path.exists(log_dir):
@@ -52,7 +50,6 @@ logging.basicConfig(
 )
 logging.info("{:=^90}".format(" {} ".format(script_name)))
 
-google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
 def article_is_published(article_to_compare: str, tolerance: int = 50, comparison_type: str = 'title') -> bool:
     tolerance = float(tolerance) / 100
@@ -72,7 +69,7 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
         text_published = article[comparison_type]
         tokens_published = word_tokenize(text_published)
         lemmas_published = [lemmatizer.lemmatize(token) for token in tokens_published]
-        ratio = SequenceMatcher(None, ' '.join(tokens_published), ' '.join(tokens_to_compare)).ratio()
+        ratio = SequenceMatcher(None, ' '.join(tokens_published), ' '.join(lemmas_to_compare)).ratio()
         logging.debug(f"Function article_is_published : ratio: {ratio}")
         if ratio >= tolerance:
             logging.info(f"Function article_is_published : return True")
@@ -80,9 +77,6 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
     logging.info(f"Function article_is_published : return False")
     return False
 
-
-from newspaper import Article, ArticleException
-import logging
 
 def get_articles(google_news, excluded_terms=None):
     logging.info(f"Function get_articles : lancement")
@@ -110,7 +104,6 @@ def get_articles(google_news, excluded_terms=None):
                 article = Article(article_url)
                 article.download()
                 article.parse()
-                article.html
                 article_content = article.text
                 article_date = article.publish_date
                 formated_content = unidecode(article_content.replace(" ", "-").lower())
@@ -286,9 +279,6 @@ def parse_arguments ():
     subject = args.subject
     lang = args.lang
     search_activated = True
-    # Vérification du sujet spécifié en ligne de commande
-    subject = args.subject
-    lang = args.lang
     if subject == 'random':
         logging.info('Function parse_arguments : appel fonction get_subject')
         subject, lang = get_subject()
@@ -438,8 +428,8 @@ def main():
         else:
             logging.warning("Main : le tweet est vide !")
     except Exception as e:
-        push_last_log_to_web()
         logging.error(f"Main : une erreur critique s'est produite : {e}")
+        push_last_log_to_web()
         pass
 
 
