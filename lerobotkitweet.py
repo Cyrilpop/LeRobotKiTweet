@@ -170,7 +170,7 @@ def get_google_trends(url):
         return results[0]['titre']
 
 
-def get_gpt_response(prompt: str, temperature: float = 0.8):
+def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
     try:
         logging.info(f"Function get_gpt_response : lancement")
         logging.info(f"Function get_gpt_response : paramètre prompt")
@@ -186,7 +186,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8):
             "messages": [
                 {
                     "role": "sytem",
-                    "content": config['chat-GPT']['message']['content'],
+                    "content": config['chat-GPT']['message']['content'][lang],
                     "role": "user",
                     "content": prompt,
                 }
@@ -206,22 +206,23 @@ def get_gpt_response(prompt: str, temperature: float = 0.8):
         sys.exit(1)
 
 
-def get_prompt(article_content: str = None, subject: str = None):
+def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr'):
     logging.info(f"Function get_prompt : lancement")
     logging.info(f"Function get_prompt : paramètre article_content")
     logging.info(f"Function get_prompt : paramètre subject : {subject}")
+    logging.info(f"Function get_prompt : paramètre lang : {lang}")
     if subject == 'humeur_matin':
-        prompt = config['chat-GPT']['prompts']['message_morning']
+        prompt = config['chat-GPT']['prompts']['message_morning'][lang]
     elif subject == 'humeur_soir':
-        prompt = config['chat-GPT']['prompts']['message_evening']
+        prompt = config['chat-GPT']['prompts']['message_evening'][lang]
     elif subject == 'cinema':
-        prompt = f"{config['chat-GPT']['prompts']['cinema']}{article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['cinema'][lang]} {article_content}"
     elif subject == 'etienne_klein':
-        prompt = f"{config['chat-GPT']['prompts']['etienne_klein']}{article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['etienne_klein'][lang]} {article_content}"
     elif subject == 'too_long':
-        prompt = f"{config['chat-GPT']['prompts']['too_long']}{article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['too_long'][lang]} {article_content}"
     else:
-        prompt = f"{config['chat-GPT']['prompts']['resume_article']}{article_content}"
+        prompt = f"{config['chat-GPT']['prompts']['resume_article'][lang]} {article_content}"
     return prompt
 
 
@@ -295,9 +296,11 @@ def parse_arguments ():
         lang = config['subjects_custom']['cinema']['lang']
         subject = f"sorties cinema {next_cinema}"
     elif subject == 'google_trends':
+        logging.info('Function parse_arguments : appel fonction get_google_trends')
         subject = get_google_trends(google_trend_rss)
         lang = config['subjects_custom']['google_trends']['lang']
     elif subject == 'twitter_trends':
+        logging.info('Function parse_arguments : appel fonction get_twitter_trends')
         trends_array = get_twitter_trends()
         twitter_trend = trends_array[0][0]
         if "#" in twitter_trend:
@@ -381,14 +384,18 @@ def tweepy_client():
 def main():
     try:
         article_url = None
+        logging.info(f"Main : appel fonction parse_arguments")
         subject,hashtag,lang,search_activated = parse_arguments ()
         inspect_launch_args(subject)
         # Vérification si le sujet est autorisé par la fonction safe_search()
+        logging.info(f"Main : appel fonction safe_search")
         if safe_search(subject):
             if search_activated:
                 # Récupération des articles de Google News liés au sujet
+                logging.info(f"Main : appel fonction get_google_news")
                 google_news = get_google_news(subject, lang)
                 # Extraction de l'article pertinent
+                logging.info(f"Main : appel fonction get_articles")
                 article_title, article_url, article_date, article_content = get_articles(google_news)
             else:
                 article_content = None
@@ -398,14 +405,17 @@ def main():
             sys.exit()
         # Ajout de l'article dans le fichier JSON des articles
         if subject not in ['humeur_soir', 'humeur_matin']:
+            logging.info(f"Main : appel fonction push_article_json")
             push_article_json(article_title, article_url)
 
         # Obtention de la phrase d'accroche à partir de l'article
-        prompt = get_prompt(article_content, subject)
+        logging.info(f"Main : appel fonction get_prompt")
+        prompt = get_prompt(article_content, subject, lang)
         client = tweepy_client()
 
         # Génération de la réponse GPT-3 à partir de la phrase d'accroche
-        tweet = f"{get_gpt_response(prompt)}{hashtag}"
+        logging.info(f"Main : appel fonction get_gpt_response")
+        tweet = f"{get_gpt_response(prompt, lang)}{hashtag}"
 
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
@@ -415,15 +425,17 @@ def main():
             attempts = 0
             while len(tweet) > max_tweet_length and attempts < max_attempts:
                 logging.warning(f"Main : impossible de tweeter : {tweet} (longueur : {len(tweet)})")
-                prompt = get_prompt(tweet, 'too_long')
+                logging.info(f"Main : appel fonction get_prompt")
+                prompt = get_prompt(tweet, 'too_long', lang)
                 logging.warning(f"Main : longueur Tweet : {len(tweet)}")
                 logging.warning(f"Main : le nouveau prompt est {prompt}")
-                tweet = get_gpt_response(prompt)
+                tweet = get_gpt_response(prompt, lang)
                 attempts += 1
             if len(tweet) > max_tweet_length:
                 push_last_log_to_web()
                 logging.warning(f"Main : impossible de tweeter : {tweet} (longueur : {len(tweet)})")
             else:
+                logging.info(f"Main : appel fonction publish_tweet")
                 publish_tweet(client, tweet, article_url)
                 push_last_log_to_web()
         else:
