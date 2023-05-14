@@ -50,7 +50,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
-logging.info("{:=^90}".format(" {} ".format(script_name)))
+logging.info("{:=^90}".format(""))
 
 
 def article_is_published(article_to_compare: str, tolerance: int = 50, comparison_type: str = 'title') -> bool:
@@ -88,22 +88,22 @@ def get_articles(google_news, excluded_terms=None):
     if len(google_news) > 0:
         for article in google_news[1:200]:
             article_title = article["title"]
-            logging.info("Function get_articles         : appel fonction is_safe_search article_title")
+            logging.info(f"   Function get_articles         : appel fonction is_safe_search article_title")
             if not is_safe_search(article_title):
                 print('Title not safe')
-                logging.warning(f"Function get_articles         : article {article_title} a été rejeté")
+                logging.warning(f"   Function get_articles         : article {article_title} a été rejeté")
                 continue
-            logging.info("Function get_articles         : appel fonction article_is_published")
+            logging.info(f"   Function get_articles         : appel fonction article_is_published")
             if article_is_published(article_title, 80, 'title'):
                 logging.info(f"   Function get_articles         : article {article_title} a déjà été publié.")
                 continue
             article_url = article["link"]
             if "http" not in article_url:
-                logging.warning(f"Function get_articles         : URL {article_url} incorrecte")
+                logging.warning(f"   Function get_articles         : URL {article_url} incorrecte")
                 continue
-            logging.info("Function get_articles         : appel fonction is_safe_search article_url")
+            logging.info(f"   Function get_articles         : appel fonction is_safe_search article_url")
             if not is_safe_search(article_url):
-                logging.warning(f"Function get_articles         : URL {article_url} a été rejeté")
+                logging.warning(f"   Function get_articles         : URL {article_url} a été rejeté")
                 continue
             logging.info(f"   Function get_articles         : titre article: {article_title}")
             logging.info(f"   Function get_articles         : date parution article : {article['date']}")
@@ -122,16 +122,16 @@ def get_articles(google_news, excluded_terms=None):
             except Exception as e:
                 logging.error(f" Function get_articles         : Erreur de traitement de l'article : {article_url}. Erreur : {e}")
                 continue
-            logging.info("Function get_articles         : appel fonction is_safe_search formated_content")
+            logging.info(f"   Function get_articles         : appel fonction is_safe_search formated_content")
             if not is_safe_search(formated_content):
-                logging.info("Function get_articles         : le contenu de l'article a été rejeté (contenu)")
+                logging.info(f"   Function get_articles         : le contenu de l'article a été rejeté (contenu)")
                 continue
             return article_title, article_url, article_date, article_content
         logging.error(f" Function get_articles         : plus aucun résultat n'a été trouvé pour la recherche marmi {len(google_news)} articles")
         push_last_log_to_web()
         sys.exit(1)
     else:
-        logging.warning(f"Function get_articles         : aucun résultat n'a été trouvé pour la recherche")
+        logging.warning(f"   Function get_articles         : aucun résultat n'a été trouvé pour la recherche")
         push_last_log_to_web()
         sys.exit(1)
 
@@ -205,7 +205,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
             "temperature": temperature,
             "max_tokens": config['chat-GPT']['max_tokens'],
         }
-        logging.info("Function get_gpt_response     : appel de l'API GPT")
+        logging.info(f"   Function get_gpt_response     : appel de l'API GPT")
         response = requests.post(url, headers=headers, data=json.dumps(data))
         response_data = json.loads(response.content)
         logging.info(f"   Function get_gpt_response     : nombre de token utilisés : {response_data['usage']['total_tokens']}")
@@ -395,6 +395,7 @@ def tweepy_client():
 def main():
     try:
         article_url = None
+        logging.info(f"   Main                          : début programme {script_name}")
         logging.info(f"   Main                          : appel fonction parse_arguments")
         subject,hashtag,lang,search_activated = parse_arguments ()
         logging.info(f"   Main                          : appel fonction inspect_launch_args")
@@ -449,8 +450,8 @@ def main():
                 logging.warning(f"Main                          : impossible de tweeter : {tweet} (longueur : {len(tweet)})")
             else:
                 # supprimer les espaces en double ainsi que les hashtags collés
-                tweet = re.sub(r'\s+', ' ', tweet)
                 tweet = re.sub(r'#(\w+)', r' #\1', tweet)
+                tweet = re.sub(r'\s+', ' ', tweet)
                 logging.info(f"   Main                          : appel fonction publish_tweet")
                 publish_tweet(client, tweet, article_url)
                 push_last_log_to_web()
