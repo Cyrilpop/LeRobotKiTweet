@@ -11,6 +11,9 @@ chat-GPT:
     etienne_klein:
       fr: "Écris un tweet court à la manière d'Etienne Klein pour résumer cet article. Utilise des emojis et des hashtags. Mentionne @EtienneKlein et termine ton tweet par des hashtags.\n"
       en: "Write a short tweet in the style of Etienne Klein summarizing this article. Use emojis and hashtags. Mention @EtienneKlein and end your tweet with hashtags.\n"
+    twitter_trends:
+      fr: "En deux mots résume ce hashtag.\n"
+      en: "In two words, summarize this hashtag.\n"
     message_evening:
       fr: "LeRobotKiTweet, un être venu d'ailleurs, exprime ses émotions du jour en un tweet de 30 mots. Fais preuve de positivité en utilisant des emojis et en incluant #BonneNuitLesTerriens au début et #LeRobotKiTweet à la fin de ton message"
       en: "LeRobotKiTweet, a being from another world, expresses their emotions of the day in a tweet of 30 words. Show positivity by using emojis and including #GoodNightEarthlings at the beginning and #LeRobotKiTweet at the end of your message."
@@ -44,6 +47,8 @@ subjects_custom:
   etienne_klein:
     lang: fr
   google_trends:
+   lang: fr
+  twitter_trends:
    lang: fr
 
 tweeter_keys:

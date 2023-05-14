@@ -232,6 +232,8 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
         prompt = f"{config['chat-GPT']['prompts']['etienne_klein'][lang]} {article_content}"
     elif subject == 'too_long':
         prompt = f"{config['chat-GPT']['prompts']['too_long'][lang]} {article_content}"
+    elif subject == 'twitter_trends':
+        prompt = f"{config['chat-GPT']['prompts']['twitter_trends'][lang]} {article_content}"
     else:
         prompt = f"{config['chat-GPT']['prompts']['resume_article'][lang]} {article_content}"
     return prompt
@@ -316,7 +318,13 @@ def parse_arguments ():
         twitter_trend = trends_array[0][0]
         if "#" in twitter_trend:
             hashtag = twitter_trend
-        subject, lang, search_activated = twitter_trend.replace('#',''), config['subjects_custom']['twitter_trends']['lang'], True
+        lang = config['subjects_custom']['twitter_trends']['lang']
+        logging.info(f"   Function parse_arguments      : appel fonction get_prompt")
+        prompt = get_prompt(hashtag, subject, lang)
+        print(prompt)
+        logging.info(f"   Function parse_arguments      : appel fonction get_gpt_response")
+        subject = get_gpt_response(prompt,0.1)
+        search_activated = True
     else:
         search_activated = False
     logging.info(f"   Function parse_arguments      : argument subject : {subject}")
