@@ -85,7 +85,7 @@ def get_articles(google_news, excluded_terms=None):
     if excluded_terms is None:
         excluded_terms = []
     if len(google_news) > 0:
-        for article in google_news[1:99]:
+        for article in google_news[1:200]:
             article_title = article["title"]
             if not safe_search(article_title):
                 print('Title not safe')
@@ -95,6 +95,9 @@ def get_articles(google_news, excluded_terms=None):
                 logging.info(f"Function get_articles : article {article_title} a déjà été publié.")
                 continue
             article_url = article["link"]
+            if "http" not in article_url:
+                logging.warning(f"Function get_articles : URL {article_url} incorrecte")
+                continue
             if not safe_search(article_url):
                 logging.warning(f"Function get_articles : URL {article_url} a été rejeté")
                 continue
@@ -287,6 +290,8 @@ def parse_arguments ():
     elif subject == 'etienne_klein':
         lang = config['subjects_custom']['etienne_klein']['lang']
         subject = 'etienne klein'
+    elif subject == "eurovision":
+        subject = "eurovision"
     elif subject == 'cinema':
         locale.setlocale(locale.LC_ALL, 'fr_FR.utf8')
         today = datetime.date.today()
@@ -415,7 +420,7 @@ def main():
 
         # Génération de la réponse GPT-3 à partir de la phrase d'accroche
         logging.info(f"Main : appel fonction get_gpt_response")
-        tweet = f"{get_gpt_response(prompt, lang)}{hashtag}"
+        tweet = f"{get_gpt_response(prompt,0.8, lang)}{hashtag}"
 
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
@@ -429,7 +434,7 @@ def main():
                 prompt = get_prompt(tweet, 'too_long', lang)
                 logging.warning(f"Main : longueur Tweet : {len(tweet)}")
                 logging.warning(f"Main : le nouveau prompt est {prompt}")
-                tweet = get_gpt_response(prompt, lang)
+                tweet = get_gpt_response(prompt,0.8, lang)
                 attempts += 1
             if len(tweet) > max_tweet_length:
                 push_last_log_to_web()
