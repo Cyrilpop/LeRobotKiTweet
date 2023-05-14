@@ -75,7 +75,7 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
         if ratio >= tolerance:
             logging.info(f"Function article_is_published : return True")
             return True
-    logging.info(f"Function article_is_published : return False")
+    logging.warning(f"Function article_is_published : return False")
     return False
 
 
@@ -369,8 +369,8 @@ def safe_search(search: str):
     search_safer = unidecode(search.replace(" ", "-").lower())
     for term in excluded_terms_check:
         if term in search_safer:
-            logging.info(f"Function safe_search : terme exclu {term} trouvé dans la recherche")
-            logging.info(f"Function safe_search : return False")
+            logging.warning(f"Function safe_search : terme exclu {term} trouvé dans la recherche")
+            logging.warning(f"Function safe_search : return False")
             return False
     logging.info(f"Function safe_search : return True")
     return True
