@@ -6,6 +6,7 @@ import locale
 import logging
 import os
 import random
+import re
 import sys
 
 # Imports de modules externes
@@ -73,9 +74,9 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
         ratio = SequenceMatcher(None, ' '.join(tokens_published), ' '.join(lemmas_to_compare)).ratio()
         logging.debug(f"Function article_is_published : ratio: {ratio}")
         if ratio >= tolerance:
-            logging.info(f"Function article_is_published : return True")
+            logging.warn(f"Function article_is_published : return True")
             return True
-    logging.warning(f"Function article_is_published : return False")
+    logging.info(f"Function article_is_published : return False")
     return False
 
 
@@ -435,11 +436,15 @@ def main():
                 logging.warning(f"Main : longueur Tweet : {len(tweet)}")
                 logging.warning(f"Main : le nouveau prompt est {prompt}")
                 tweet = get_gpt_response(prompt,0.8, lang)
+
                 attempts += 1
             if len(tweet) > max_tweet_length:
                 push_last_log_to_web()
                 logging.warning(f"Main : impossible de tweeter : {tweet} (longueur : {len(tweet)})")
             else:
+                # supprimer les espaces en double ainsi que les hashtags collés
+                tweet = re.sub(r'\s+', ' ', tweet)
+                tweet = re.sub(r'#(\w+)', r' #\1', tweet)
                 logging.info(f"Main : appel fonction publish_tweet")
                 publish_tweet(client, tweet, article_url)
                 push_last_log_to_web()
