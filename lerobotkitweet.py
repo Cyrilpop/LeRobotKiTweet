@@ -323,7 +323,7 @@ def parse_arguments ():
         prompt = get_prompt(hashtag, subject, lang)
         print(prompt)
         logging.info(f"   Function parse_arguments      : appel fonction get_gpt_response")
-        subject = get_gpt_response(prompt,0.1)
+        subject = get_gpt_response(prompt, 0.1)
         search_activated = True
     else:
         search_activated = False
@@ -436,7 +436,7 @@ def main():
 
         # Génération de la réponse GPT-3 à partir de la phrase d'accroche
         logging.info(f"   Main                          : appel fonction get_gpt_response")
-        tweet = f"{get_gpt_response(prompt,0.8, lang)}{hashtag}"
+        tweet = f"{get_gpt_response(prompt, 0.8, lang)}{hashtag}"
 
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
@@ -450,7 +450,7 @@ def main():
                 prompt = get_prompt(tweet, 'too_long', lang)
                 logging.warning(f"Main                          : longueur Tweet : {len(tweet)}")
                 logging.warning(f"Main                          : le nouveau prompt est {prompt}")
-                tweet = get_gpt_response(prompt,0.8, lang)
+                tweet = get_gpt_response(prompt, 0.8, lang)
 
                 attempts += 1
             if len(tweet) > max_tweet_length:
