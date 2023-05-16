@@ -74,7 +74,7 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
         ratio = SequenceMatcher(None, ' '.join(tokens_published), ' '.join(lemmas_to_compare)).ratio()
         logging.debug(f"Function article_is_published : ratio: {ratio}")
         if ratio >= tolerance:
-            logging.warn(f"Function article_is_published : return True")
+            logging.warning(f"Function article_is_published : return True")
             return True
     logging.info(f"   Function article_is_published : return False")
     return False
@@ -134,6 +134,19 @@ def get_articles(google_news, excluded_terms=None):
         logging.warning(f"   Function get_articles         : aucun résultat n'a été trouvé pour la recherche")
         push_last_log_to_web()
         sys.exit(1)
+
+
+def get_clean_tweet(tweet):
+    # Retire les espaces en début et en fin de tweet
+    tweet = tweet.strip()
+    # Remplace les doubles espaces par des espaces simples
+    tweet = ' '.join(tweet.split())
+    # Retire les doublons de "#" en ne laissant qu'une seule occurrence
+    tweet = remove_duplicate_hashtags(tweet)
+    # Supprime les hashtags qui ne consistent qu'en une seule lettre
+    tweet = ' '.join(word for word in tweet.split() if not (word.startswith("#") and len(word) == 2))
+    # Retourne le tweet nettoyé
+    return tweet
 
 
 def get_google_news(subject: str, lang: str = 'fr'):
@@ -280,6 +293,20 @@ def inspect_launch_args(subject):
     else:
         logging.info(f"   Function inspect_launch_args  : script lancé manuellement")
 
+def is_safe_search(search: str):
+    excluded_terms = config['excluded_terms']
+    logging.info(f"   Function is_safe_search       : lancement")
+    logging.info(f"   Function is_safe_search       : paramètre search")
+    excluded_terms_check = [unidecode(term.replace(" ", "-").lower()) for term in excluded_terms]
+    search_safer = unidecode(search.replace(" ", "-").lower())
+    for term in excluded_terms_check:
+        if term in search_safer:
+            logging.warning(f"Function is_safe_search       : terme exclu {term} trouvé dans la recherche")
+            logging.warning(f"Function is_safe_search       : return False")
+            return False
+    logging.info(f"   Function is_safe_search       : return True")
+    return True
+
 
 def parse_arguments ():
     logging.info(f"   Function parse_arguments      : lancement")
@@ -316,12 +343,12 @@ def parse_arguments ():
         logging.info(f"   Function parse_arguments      : appel fonction get_twitter_trends")
         trends_array = get_twitter_trends()
         twitter_trend = trends_array[0][0]
-        if "#" in twitter_trend:
-            hashtag = twitter_trend
+        hashtag = twitter_trend
+        if not hashtag.startswith("#"):
+            hashtag = "#" + hashtag
         lang = config['subjects_custom']['twitter_trends']['lang']
         logging.info(f"   Function parse_arguments      : appel fonction get_prompt")
         prompt = get_prompt(hashtag, subject, lang)
-        print(prompt)
         logging.info(f"   Function parse_arguments      : appel fonction get_gpt_response")
         subject = get_gpt_response(prompt, 0.1)
         search_activated = True
@@ -375,19 +402,18 @@ def push_last_log_to_web():
                 target_file.write(line)
 
 
-def is_safe_search(search: str):
-    excluded_terms = config['excluded_terms']
-    logging.info(f"   Function is_safe_search       : lancement")
-    logging.info(f"   Function is_safe_search       : paramètre search")
-    excluded_terms_check = [unidecode(term.replace(" ", "-").lower()) for term in excluded_terms]
-    search_safer = unidecode(search.replace(" ", "-").lower())
-    for term in excluded_terms_check:
-        if term in search_safer:
-            logging.warning(f"Function is_safe_search       : terme exclu {term} trouvé dans la recherche")
-            logging.warning(f"Function is_safe_search       : return False")
-            return False
-    logging.info(f"   Function is_safe_search       : return True")
-    return True
+def remove_duplicate_hashtags(text):
+    words = text.split()
+    unique_words = []
+    seen_hashtags = set()
+    for word in words:
+        if word.startswith("#"):
+            if word not in seen_hashtags:
+                seen_hashtags.add(word)
+                unique_words.append(word)
+            continue
+        unique_words.append(word)
+    return ' '.join(unique_words)
 
 
 def tweepy_client():
@@ -436,8 +462,8 @@ def main():
 
         # Génération de la réponse GPT-3 à partir de la phrase d'accroche
         logging.info(f"   Main                          : appel fonction get_gpt_response")
-        tweet = f"{get_gpt_response(prompt, 0.8, lang)}{hashtag}"
-
+        tweet = f"{get_gpt_response(prompt, 0.8, lang)} {hashtag}"
+        tweet = get_clean_tweet(tweet)
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
             # Vérification si le tweet est trop long
