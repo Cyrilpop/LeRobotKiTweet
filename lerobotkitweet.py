@@ -155,7 +155,7 @@ def get_clean_tweet(tweet):
 
 def get_google_news(subject: str, lang: str = 'fr'):
     logging.info(f"   Function get_google_news           : lancement")
-    logging.info(f"   Function get_google_news           : paramètre subject      : {subject}")
+    logging.info(f"   Function get_google_news           : paramètre subject : {subject}")
     googlenews = GoogleNews(lang=lang, region="com", period='1d')
     try:
         googlenews.search(subject)
@@ -238,11 +238,13 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
     logging.info(f"   Function get_prompt                : lancement")
     logging.info(f"   Function get_prompt                : paramètre article_content")
     logging.info(f"   Function get_prompt                : paramètre subject      : {subject}")
-    logging.info(f"   Function get_prompt                : paramètre lang      : {lang}")
+    logging.info(f"   Function get_prompt                : paramètre lang : {lang}")
+    locale.setlocale(locale.LC_TIME, 'fr_FR')
+    day_of_week = datetime.datetime.now().strftime("%A")
     if subject == 'humeur_matin':
-        prompt = config['chat-GPT']['prompts']['message_morning'][lang]
+        prompt = f"Aujourd' hui nous sommes {day_of_week}. {config['chat-GPT']['prompts']['message_morning'][lang]}"
     elif subject == 'humeur_soir':
-        prompt = config['chat-GPT']['prompts']['message_evening'][lang]
+        prompt = f"Aujourd' hui nous sommes {day_of_week}. {config['chat-GPT']['prompts']['message_evening'][lang]}"
     elif subject == 'cinema':
         prompt = f"{config['chat-GPT']['prompts']['cinema'][lang]} {article_content}"
     elif subject == 'etienne_klein':
@@ -384,7 +386,7 @@ def parse_arguments ():
         search_activated = False
     logging.info(f"   Function parse_arguments           : argument subject      : {subject}")
     logging.info(f"   Function parse_arguments           : argument hashtag      : {hashtag}")
-    logging.info(f"   Function parse_arguments           : argument lang      : {lang}")
+    logging.info(f"   Function parse_arguments           : argument lang : {lang}")
     logging.info(f"   Function parse_arguments           : argument search_activated      : {search_activated}")
     return subject,hashtag,lang,search_activated
 
