@@ -38,6 +38,7 @@ log_name = config['logging']['file_name']
 script_name = os.path.basename(__file__)
 
 # Variables globals
+current_date = datetime.datetime.now().strftime("%Y%m%d")
 google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
 # Création du répertoire de log s'il n'existe pas
@@ -106,21 +107,21 @@ def get_articles(google_news, excluded_terms=None):
                 logging.warning(f"   Function get_articles              : URL {article_url} a été rejeté")
                 continue
             logging.info(f"   Function get_articles              : titre article: {article_title}")
-            logging.info(f"   Function get_articles              : date parution article      : {article['date']}")
-            logging.info(f"   Function get_articles              : URL article      : {article_url}")
+            logging.info(f"   Function get_articles              : date parution article : {article['date']}")
+            logging.info(f"   Function get_articles              : URL article : {article_url}")
             try:
                 article = Article(article_url)
                 article.download()
                 article.parse()
                 article_content = article.text
-                logging.info(f"   Function get_articles              : longueur article      : {len(article_content)}")
+                logging.info(f"   Function get_articles              : longueur article : {len(article_content)}")
                 article_date = article.publish_date
                 formated_content = unidecode(article_content.replace(" ", "-").lower())
             except ArticleException as ae:
-                logging.error(f" Function get_articles              : Erreur de traitement de l'article      : {article_url}. ArticleException      : {ae}")
+                logging.error(f" Function get_articles              : Erreur de traitement de l'article : {article_url}. ArticleException      : {ae}")
                 continue
             except Exception as e:
-                logging.error(f" Function get_articles              : Erreur de traitement de l'article      : {article_url}. Erreur      : {e}")
+                logging.error(f" Function get_articles              : Erreur de traitement de l'article : {article_url}. Erreur      : {e}")
                 continue
             logging.info(f"   Function get_articles              : appel fonction is_safe_search formated_content")
             if not is_safe_search(formated_content):
@@ -277,11 +278,19 @@ def get_twitter_trends():
         items_list = content.split(') ')
         items_list[-1] = items_list[-1].replace('..[top50]', '').strip()
         items_list = [f"{item.rsplit(' ', 1)[0]}" for item in items_list]
+
         if title != last_title:
             last_title = title
             items.append(items_list[1:])
         else:
-            items[-1] += items_list[1:]
+            index = 1
+            while index < len(items_list):
+                logging.info(f"   Function get_twitter_trends        : appel fonction is_safe_search pour {items_list[index]}")
+                if is_safe_search(items_list[index]):
+                    items[-1] += items_list[index:]
+                    break
+                index += 1
+
     trends = [f"Trend_{i*30}" for i in range(len(items))]
     trend_arrays = [np.array(items[i]) for i in range(len(trends))]
     logging.info(f"   Function get_twitter_trends        : trend obtenu      : {trend_arrays[0][0]}")
@@ -295,6 +304,7 @@ def inspect_launch_args(subject):
         logging.info(f"   Function inspect_launch_args       : script lancé par cron")
     else:
         logging.info(f"   Function inspect_launch_args       : script lancé manuellement")
+
 
 def is_safe_search(search: str):
     excluded_terms = config['excluded_terms']
@@ -345,7 +355,22 @@ def parse_arguments ():
     elif subject == 'twitter_trends':
         logging.info(f"   Function parse_arguments           : appel fonction get_twitter_trends")
         trends_array = get_twitter_trends()
-        twitter_trend = trends_array[0][0]
+        try:
+            with open("archives_trends.txt", "r") as f:
+                trends_file = f.readlines()
+        except FileNotFoundError:
+            trends_file = []
+        # Récupération des valeurs de trends_array[0]
+        trends_values = trends_array[0]
+        # Boucle sur les valeurs de trends_values pour trouver une valeur non présente dans le fichier
+        for trend in trends_values:
+            if not any(f"{current_date} {trend}".lower() in line.strip().lower() for line in trends_file):
+                twitter_trend = trend
+                with open("archives_trends.txt", "a") as f:
+                    f.write(f"{current_date} {trend}\n")  # Ajouter la date actuelle et le hashtag au fichier
+                break
+            else:
+                logging.info(f"   Function parse_arguments           : trends {trend} déjà utilisé aujourd'hui")
         hashtag = twitter_trend
         if not hashtag.startswith("#"):
             hashtag = "#" + hashtag
@@ -499,7 +524,7 @@ def main():
         else:
             logging.warning("Main                               : le tweet est vide !")
     except Exception as e:
-        logging.error(f" Main                               : une erreur critique s'est produite      : {e}")
+        logging.error(f" Main                                 : une erreur critique s'est produite      : {e}")
         push_last_log_to_web()
         pass
 
