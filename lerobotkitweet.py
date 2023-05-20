@@ -247,7 +247,7 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
         prompt = f"Aujourd' hui nous sommes {day_of_week}. {config['chat-GPT']['prompts']['message_evening'][lang]}"
     elif subject == 'cinema':
         prompt = f"{config['chat-GPT']['prompts']['cinema'][lang]} {article_content}"
-    elif subject == 'etienne_klein':
+    elif 'klein' in subject:
         prompt = f"{config['chat-GPT']['prompts']['etienne_klein'][lang]} {article_content}"
     elif subject == 'too_long':
         prompt = f"{config['chat-GPT']['prompts']['too_long'][lang]} {article_content}"
@@ -255,6 +255,8 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
         prompt = f"{config['chat-GPT']['prompts']['twitter_trends'][lang]} {article_content}"
     else:
         prompt = f"{config['chat-GPT']['prompts']['resume_article'][lang]} {article_content}"
+    print(prompt)
+    sys.exit()
     return prompt
 
 
@@ -341,6 +343,11 @@ def parse_arguments ():
         subject, lang = get_subject()
     elif subject == 'etienne_klein':
         lang = config['subjects_custom']['etienne_klein']['lang']
+    elif subject == 'etienne_klein_fr':
+        lang = config['subjects_custom']['etienne_klein_fr']['lang']
+        subject = 'etienne klein'
+    elif subject == 'etienne_klein_en':
+        lang = config['subjects_custom']['etienne_klein_en']['lang']
         subject = 'etienne klein'
     elif subject == 'cinema':
         locale.setlocale(locale.LC_ALL, 'fr_FR.utf8')
@@ -527,7 +534,7 @@ def main():
         else:
             logging.warning("Main                               : le tweet est vide !")
     except Exception as e:
-        logging.error(f" Main                                 : une erreur critique s'est produite      : {e}")
+        logging.error(f"  Main                               : une erreur critique s'est produite      : {e}")
         push_last_log_to_web()
         pass
 

@@ -9,24 +9,23 @@ chat-GPT:
   openai_key: YOUR_KEY_HERE
   prompts:
     etienne_klein:
-      fr: "Écris un tweet court à la manière d'Etienne Klein pour résumer cet article. Utilise des emojis et des hashtags. Mentionne @EtienneKlein et termine ton tweet par des hashtags.\n"
-      en: "Write a short tweet in the style of Etienne Klein summarizing this article. Use emojis and hashtags. Mention @EtienneKlein and end your tweet with hashtags.\n"
+      fr: "Écris un tweet court à la manière d'Etienne Klein pour résumer cet article. Utilise des emojis et des hashtags. Le tweet doit obligatoirement contenir @EtienneKlein.\n"
+      en: "Write a short tweet in the style of Etienne Klein summarizing this article. Use emojis and hashtags. The tweet must contain @EtienneKlein.\n"
     twitter_trends:
-      fr: "En un ou deux mots extrait les mots clés de ce hashtag, si c'est une personne donne son nom complet. Si c'est un seul mot inteligible, répète le\n"
-      en: "Extract the keywords from this hashtag in one or two words. If it's a person, provide their full name. If it's a single unintelligible word, repeat it."
-
+      fr: "En un ou deux mots extrait les mots clés de ce hashtag, si c'est une personne donne son nom complet. Si c'est un seul mot intelligent, répète-le.\n"
+      en: "Extract the keywords from this hashtag in one or two words. If it's a person, provide their full name. If it's a single intelligible word, repeat it.\n"
     message_evening:
-      fr: "LeRobotKiTweet, un être venu d'ailleurs, exprime ses émotions du jour en un tweet de 30 mots. Fais preuve de positivité en utilisant des emojis et en incluant #BonneNuitLesTerriens au début et #LeRobotKiTweet à la fin de ton message"
-      en: "LeRobotKiTweet, a being from another world, expresses their emotions of the day in a tweet of 30 words. Show positivity by using emojis and including #GoodNightEarthlings at the beginning and #LeRobotKiTweet at the end of your message."
+      fr: "LeRobotKiTweet, un être venu d'ailleurs, exprime ses émotions du jour en un tweet de 30 mots. Fais preuve de positivité en utilisant des emojis et en incluant #BonneNuitLesTerriens au début et #LeRobotKiTweet à la fin de ton message.\n"
+      en: "LeRobotKiTweet, a being from another world, expresses their emotions of the day in a tweet of 30 words. Show positivity by using emojis and including #GoodNightEarthlings at the beginning and #LeRobotKiTweet at the end of your message.\n"
     message_morning:
-      fr: "Écris un tweet inspirant de 35 mots avec des emojis et des hashtags pour répandre la joie, la positivité et la motivation. Commence ton tweet avec #SalutLesTerriens et termine-le par #LeRobotKiTweet."
-      en: "Write an inspiring 35-word tweet with emojis and hashtags to spread joy, positivity, and motivation. Start your tweet with #HelloEarthlings and end it with #LeRobotKiTweet."
+      fr: "Écris un tweet inspirant de 35 mots avec des emojis et des hashtags pour répandre la joie, la positivité et la motivation. Commence ton tweet avec #SalutLesTerriens et termine-le par #LeRobotKiTweet.\n"
+      en: "Write an inspiring 35-word tweet with emojis and hashtags to spread joy, positivity, and motivation. Start your tweet with #HelloEarthlings and end it with #LeRobotKiTweet.\n"
     resume_article:
-      fr: "Résume en un tweet court de 30 mots maximum avec des emojis et ajoute des hashtags l'article suivant. Fais preuve de clarté et d'efficacité dans ton message.\n"
-      en: "Summarize the following article in a short tweet of 30 words maximum and add emojis and hashtags. Be clear and effective in your message.\n"
+      fr: "Résume en un tweet court de 30 mots maximum avec des emojis et ajoute des hashtags à l'article suivant. Fais preuve de clarté et d'efficacité dans ton message.\n"
+      en: "Summarize the following article in a short tweet of 30 words maximum. Add emojis and hashtags. Be clear and effective in your message.\n"
     too_long:
-      fr: "Résume ce tweet en 30 mots maximum avec des emojis et des hashtags."
-      en: "Summarize this tweet in 30 words or fewer, including emojis and hashtags."
+      fr: "Résume ce tweet en 30 mots maximum avec des emojis et des hashtags. Si le tweet contient déjà @EtiennekKein, conserve-le."
+      en: "Summarize this tweet in 30 words or fewer, including emojis and hashtags. If the tweet already contains @EtienneKlein, keep it."
 
 excluded_terms:
   - word 1
@@ -45,12 +44,20 @@ subjects:
     weight: 1
 
 subjects_custom:
-  etienne_klein:
+  cinema:
     lang: fr
+  etienne_klein_fr:
+    lang: fr
+  etienne_klein_en:
+    lang: en
   google_trends:
-   lang: fr
+    lang: fr
+  humeur_matin:
+    lang: fr
+  humeur_soir:
+    lang: fr
   twitter_trends:
-   lang: fr
+    lang: fr
 
 tweeter_keys:
   consumer_key: YOUR_KEY_HERE
