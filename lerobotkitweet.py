@@ -92,7 +92,7 @@ def get_articles(google_news, excluded_terms=None):
             logging.info(f"   Function get_articles              : appel fonction is_safe_search article_title")
             if not is_safe_search(article_title):
                 print('Title not safe')
-                logging.warning(f"   Function get_articles              : article {article_title} a été rejeté")
+                logging.warning(f" Function get_articles              : article {article_title} a été rejeté")
                 continue
             logging.info(f"   Function get_articles              : appel fonction article_is_published")
             if article_is_published(article_title, 80, 'title'):
@@ -139,7 +139,7 @@ def get_articles(google_news, excluded_terms=None):
 
 def get_clean_tweet(tweet):
     logging.info(f"   Function get_clean_tweet           : lancement")
-    logging.info(f"   Function get_clean_tweet           : paramètre      : tweet")
+    logging.info(f"   Function get_clean_tweet           : paramètre : tweet")
     # Retire les espaces en début et en fin de tweet
     tweet = tweet.strip()
     # Remplace les doubles espaces par des espaces simples
@@ -225,10 +225,10 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
         logging.info(f"   Function get_gpt_response          : appel de l'API GPT")
         response = requests.post(url, headers=headers, data=json.dumps(data))
         response_data = json.loads(response.content)
-        logging.info(f"   Function get_gpt_response          : nombre de token utilisés      : {response_data['usage']['total_tokens']}")
+        logging.info(f"   Function get_gpt_response          : nombre de token utilisés : {response_data['usage']['total_tokens']}")
         return response_data["choices"][0]["message"]["content"]
     except Exception as e:
-        logging.error(f" Function get_gpt_response          : erreur lors de l'appel à l'API OpenAI      : {response_data['error']['message']}")
+        logging.error(f" Function get_gpt_response          : erreur lors de l'appel à l'API OpenAI : {response_data['error']['message']}")
         print(e)
         push_last_log_to_web()
         sys.exit(1)
@@ -237,9 +237,9 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
 def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr'):
     logging.info(f"   Function get_prompt                : lancement")
     logging.info(f"   Function get_prompt                : paramètre article_content")
-    logging.info(f"   Function get_prompt                : paramètre subject      : {subject}")
+    logging.info(f"   Function get_prompt                : paramètre subject : {subject}")
     logging.info(f"   Function get_prompt                : paramètre lang : {lang}")
-    locale.setlocale(locale.LC_TIME, 'fr_FR')
+    locale.setlocale(locale.LC_TIME, 'fr_FR.utf8')
     day_of_week = datetime.datetime.now().strftime("%A")
     if subject == 'humeur_matin':
         prompt = f"Aujourd' hui nous sommes {day_of_week}. {config['chat-GPT']['prompts']['message_morning'][lang]}"
@@ -263,7 +263,7 @@ def get_subject():
     subjects = config['subjects']
     poids = [subjects[key]['weight'] for key in subjects]
     chosen_subject = random.choices(list(subjects.keys()), weights=poids, k=1)[0]
-    logging.info(f"   Function get_subject               : sujet obtenu      : {chosen_subject}")
+    logging.info(f"   Function get_subject               : sujet obtenu : {chosen_subject}")
     return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
 
@@ -295,13 +295,13 @@ def get_twitter_trends():
 
     trends = [f"Trend_{i*30}" for i in range(len(items))]
     trend_arrays = [np.array(items[i]) for i in range(len(trends))]
-    logging.info(f"   Function get_twitter_trends        : trend obtenu      : {trend_arrays[0][0]}")
+    logging.info(f"   Function get_twitter_trends        : trend obtenu : {trend_arrays[0][0]}")
     return trend_arrays
 
 
 def inspect_launch_args(subject):
     logging.info(f"   Function inspect_launch_args       : lancement")
-    logging.info(f"   Function inspect_launch_args       : paramètre subject      : {subject}")
+    logging.info(f"   Function inspect_launch_args       : paramètre subject : {subject}")
     if os.getenv("SHELL") == "/bin/sh":
         logging.info(f"   Function inspect_launch_args       : script lancé par cron")
     else:
@@ -368,6 +368,7 @@ def parse_arguments ():
         for trend in trends_values:
             if not any(f"{current_date} {trend}".lower() in line.strip().lower() for line in trends_file):
                 twitter_trend = trend
+                logging.info(f"   Function parse_arguments           : twitter_trend obtenu {trend} ")
                 with open("archives_trends.txt", "a") as f:
                     f.write(f"{current_date} {trend}\n")  # Ajouter la date actuelle et le hashtag au fichier
                 break
@@ -384,10 +385,10 @@ def parse_arguments ():
         search_activated = True
     else:
         search_activated = False
-    logging.info(f"   Function parse_arguments           : argument subject      : {subject}")
-    logging.info(f"   Function parse_arguments           : argument hashtag      : {hashtag}")
+    logging.info(f"   Function parse_arguments           : argument subject : {subject}")
+    logging.info(f"   Function parse_arguments           : argument hashtag : {hashtag}")
     logging.info(f"   Function parse_arguments           : argument lang : {lang}")
-    logging.info(f"   Function parse_arguments           : argument search_activated      : {search_activated}")
+    logging.info(f"   Function parse_arguments           : argument search_activated : {search_activated}")
     return subject,hashtag,lang,search_activated
 
 
@@ -401,7 +402,7 @@ def publish_tweet(client, tweet_content: str, article_url: str = None):
             tweet_content += f" {article_url}"
         tweet_content = tweet_content.replace('"', '')
         logging.info(f"   Function publish_tweet             : publication du Tweet")
-        logging.info(f"   Function publish_tweet             : longueur du tweet      : {len(tweet_content)}")
+        logging.info(f"   Function publish_tweet             : longueur du tweet : {len(tweet_content)}")
         response = client.create_tweet(text=tweet_content)
         return response
     except Exception as e:
