@@ -39,6 +39,7 @@ script_name = os.path.basename(__file__)
 
 # Variables globals
 current_date = datetime.datetime.now().strftime("%Y%m%d")
+short_date = datetime.datetime.now().strftime("%y%m%d")
 google_trend_rss = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=FR&hl=fr'
 
 # Création du répertoire de log s'il n'existe pas
@@ -72,9 +73,11 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
         text_published = article[comparison_type]
         tokens_published = word_tokenize(text_published)
         lemmas_published = [lemmatizer.lemmatize(token) for token in tokens_published]
-        ratio = SequenceMatcher(None, ' '.join(tokens_published), ' '.join(lemmas_to_compare)).ratio()
+        ratio = SequenceMatcher(None, ' '.join(lemmas_published), ' '.join(lemmas_to_compare)).ratio()
         logging.debug(f"Function article_is_published      : ratio: {ratio}")
         if ratio >= tolerance:
+            logging.warning(f"Function article_is_published      : article : {article[comparison_type]}")
+            logging.warning(f"Function article_is_published      : radio : {ratio}")
             logging.warning(f"Function article_is_published      : return True")
             return True
     logging.info(f"   Function article_is_published      : return False")
@@ -164,12 +167,12 @@ def get_google_news(subject: str, lang: str = 'fr'):
             sys.exit(1)
     except Exception as e:
         logging.error(f" Function get_google_news           : erreur s'est produite lors de l'appel à la méthode search()      : {e}")
-        sys.exit()
+        sys.exit(1)
     try:
         googlenews = googlenews.result()
     except AttributeError as e:
         logging.error(f" Function get_google_news           : une erreur s'est produite lors de l'appel à la méthode result()      : {e}")
-        sys.exit()
+        sys.exit(1)
     return googlenews
 
 
@@ -234,6 +237,23 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
         sys.exit(1)
 
 
+def get_picture_of_the_day(article_url):
+    logging.info(f"   Function get_picture_of_the_day    : lancement")
+    logging.info(f"   Function get_picture_of_the_day    : article_url : {article_url}")
+    logging.info(f"   Function get_picture_of_the_day    : appel fonction article_is_published")
+    if not article_is_published(article_url, 100 , "url"):
+        article = Article(article_url)
+        article.download()
+        article.parse()
+        article_title = article.title
+        article_content = article.text
+        return article_title, article_content
+    else:
+        logging.error(f"  Function get_picture_of_the_day    : Photo du jour déjà publiée !")
+        sys.exit(1)
+
+
+
 def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr'):
     logging.info(f"   Function get_prompt                : lancement")
     logging.info(f"   Function get_prompt                : paramètre article_content")
@@ -253,10 +273,11 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
         prompt = f"{config['chat-GPT']['prompts']['too_long'][lang]} {article_content}"
     elif subject == 'twitter_trends':
         prompt = f"{config['chat-GPT']['prompts']['twitter_trends'][lang]} {article_content}"
+    elif subject == 'picture_of_the_day':
+        prompt = f"{config['chat-GPT']['prompts']['picture_of_the_day'][lang]} {article_content}"
+
     else:
         prompt = f"{config['chat-GPT']['prompts']['resume_article'][lang]} {article_content}"
-    print(prompt)
-    sys.exit()
     return prompt
 
 
@@ -365,7 +386,7 @@ def parse_arguments ():
         logging.info(f"   Function parse_arguments           : appel fonction get_twitter_trends")
         trends_array = get_twitter_trends()
         try:
-            with open("archives_trends.txt", "r") as f:
+            with open(f"{current_dir}/archives_trends.txt", "r") as f:
                 trends_file = f.readlines()
         except FileNotFoundError:
             trends_file = []
@@ -376,7 +397,7 @@ def parse_arguments ():
             if not any(f"{current_date} {trend}".lower() in line.strip().lower() for line in trends_file):
                 twitter_trend = trend
                 logging.info(f"   Function parse_arguments           : twitter_trend obtenu {trend} ")
-                with open("archives_trends.txt", "a") as f:
+                with open(f"{current_dir}/archives_trends.txt", "a") as f:
                     f.write(f"{current_date} {trend}\n")  # Ajouter la date actuelle et le hashtag au fichier
                 break
             else:
@@ -390,6 +411,10 @@ def parse_arguments ():
         logging.info(f"   Function parse_arguments           : appel fonction get_gpt_response")
         subject = get_gpt_response(prompt, 0.1)
         search_activated = True
+    elif subject == 'picture_of_the_day':
+        lang = config['subjects_custom']['picture_of_the_day']['lang']
+        hashtag = "#NASA #PictureOfTheDay #SpaceExploration #AstroPhotography #CosmicWonders"
+        search_activated = False
     else:
         search_activated = False
     logging.info(f"   Function parse_arguments           : argument subject : {subject}")
@@ -483,12 +508,16 @@ def main():
                 # Extraction de l'article pertinent
                 logging.info(f"   Main                               : appel fonction get_articles")
                 article_title, article_url, article_date, article_content = get_articles(google_news)
+            elif subject == 'picture_of_the_day':
+                article_url = f"https://www.cidehom.com/apod.php?_date={short_date}"
+                logging.info(f"   Main                               : appel fonction get_picture_of_the_day")
+                article_title, article_content = get_picture_of_the_day(article_url)
             else:
                 article_content = None
         else:
             # Si le sujet n'est pas autorisé par is_safe_search(), on quitte le script
             push_last_log_to_web()
-            sys.exit()
+            sys.exit(1)
         # Ajout de l'article dans le fichier JSON des articles
         if subject not in ['humeur_soir', 'humeur_matin']:
             logging.info(f"   Main                               : appel fonction push_article_json")

@@ -20,6 +20,9 @@ chat-GPT:
     message_morning:
       fr: "Écris un tweet inspirant de 35 mots avec des emojis et des hashtags pour répandre la joie, la positivité et la motivation. Commence ton tweet avec #SalutLesTerriens et termine-le par #LeRobotKiTweet.\n"
       en: "Write an inspiring 35-word tweet with emojis and hashtags to spread joy, positivity, and motivation. Start your tweet with #HelloEarthlings and end it with #LeRobotKiTweet.\n"
+    picture_of_the_day:
+      fr: "Fais un tweet de 30 mots de l'article suivant, c'est la photo du jour de la NASA, il faut obligatoirement des hashtags, des emojis et mentionner @NASA dans ta réponse\n"
+      en: "Compose a 30-word tweet about the following article. It's the NASA's picture of the day, so make sure to include hashtags, emojis, and mention @NASA in your response.\n"
     resume_article:
       fr: "Résume en un tweet court de 30 mots maximum avec des emojis et ajoute des hashtags à l'article suivant. Fais preuve de clarté et d'efficacité dans ton message.\n"
       en: "Summarize the following article in a short tweet of 30 words maximum. Add emojis and hashtags. Be clear and effective in your message.\n"
@@ -58,7 +61,8 @@ subjects_custom:
     lang: fr
   twitter_trends:
     lang: fr
-
+  picture_of_the_day:
+    lang: en
 tweeter_keys:
   consumer_key: YOUR_KEY_HERE
   consumer_secret: YOUR_KEY_HERE
