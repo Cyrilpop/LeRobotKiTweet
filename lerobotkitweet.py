@@ -231,7 +231,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
         logging.info(f"   Function get_gpt_response          : nombre de token utilisés : {response_data['usage']['total_tokens']}")
         return response_data["choices"][0]["message"]["content"]
     except Exception as e:
-        logging.error(f" Function get_gpt_response          : erreur lors de l'appel à l'API OpenAI : {response_data['error']['message']}")
+        logging.error(f"  Function get_gpt_response          : erreur lors de l'appel à l'API OpenAI : {response_data['error']['message']}")
         print(e)
         push_last_log_to_web()
         sys.exit(1)
@@ -345,6 +345,23 @@ def is_safe_search(search: str):
     logging.info(f"   Function is_safe_search            : return True")
     return True
 
+def is_safe_theme(theme):
+    logging.warning(f"Function is_safe_theme             : lancement")
+    prompt = f"Répond uniquement oui ou non à ma question. Est-ce que le hashtag a un rapport avec le foot ?\n{theme}"
+    logging.warning(f"Function is_safe_theme             : appel fonction get_gpt_response")
+    is_safe_search = get_gpt_response(prompt, 0.1, 'fr')
+    is_safe_search = is_safe_search.lower()
+    print(is_safe_search)
+    if "oui" in is_safe_search:
+        print('FAUX')
+        return False
+    elif "non" in is_safe_search:
+        print('VRAI')
+        return True
+    else:
+        return None
+
+
 
 def parse_arguments ():
     logging.info(f"   Function parse_arguments           : lancement")
@@ -362,6 +379,10 @@ def parse_arguments ():
     if subject == 'random':
         logging.info(f"   Function parse_arguments           : appel fonction get_subject")
         subject, lang = get_subject()
+        trends_array = get_twitter_trends()
+        hashtag = trends_array[0][0]
+        if not hashtag.startswith("#"):
+            hashtag = "#" + hashtag
     elif subject == 'etienne_klein':
         lang = config['subjects_custom']['etienne_klein']['lang']
     elif subject == 'etienne_klein_fr':
@@ -396,10 +417,12 @@ def parse_arguments ():
         for trend in trends_values:
             if not any(f"{current_date} {trend}".lower() in line.strip().lower() for line in trends_file):
                 twitter_trend = trend
-                logging.info(f"   Function parse_arguments           : twitter_trend obtenu {trend} ")
-                with open(f"{current_dir}/archives_trends.txt", "a") as f:
-                    f.write(f"{current_date} {trend}\n")  # Ajouter la date actuelle et le hashtag au fichier
-                break
+                logging.info(f"   Function parse_arguments           : appel fonction is_safe_theme")
+                if is_safe_theme(trend):
+                    logging.info(f"   Function parse_arguments           : twitter_trend obtenu {trend} ")
+                    with open(f"{current_dir}/archives_trends.txt", "a") as f:
+                        f.write(f"{current_date} {trend}\n")  # Ajouter la date actuelle et le hashtag au fichier
+                    break
             else:
                 logging.info(f"   Function parse_arguments           : trends {trend} déjà utilisé aujourd'hui")
         hashtag = twitter_trend
@@ -421,6 +444,8 @@ def parse_arguments ():
     logging.info(f"   Function parse_arguments           : argument hashtag : {hashtag}")
     logging.info(f"   Function parse_arguments           : argument lang : {lang}")
     logging.info(f"   Function parse_arguments           : argument search_activated : {search_activated}")
+    print(subject,hashtag,lang,search_activated)
+    sys.exit()
     return subject,hashtag,lang,search_activated
 
 

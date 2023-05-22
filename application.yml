@@ -41,9 +41,11 @@ logging:
 subjects:
   sciences:
     name: sciences
+    lang: fr
     weight: 4
   Space:
     name: NASA
+    lang: fr
     weight: 1
 
 subjects_custom:
