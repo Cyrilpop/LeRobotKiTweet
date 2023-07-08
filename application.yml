@@ -7,6 +7,7 @@ chat-GPT:
       fr: "Tu es un influenceur sur Twitter. Pour chaque réponse, écris 3 phrases avec des hashtags et des emojis."
       en: "You are an influencer on Twitter. For each response, write 3 sentences with hashtags and emojis."
   openai_key: YOUR_KEY_HERE
+  openai_model: "gpt-3.5-turbo"
   prompts:
     etienne_klein:
       fr: "Écris un tweet court à la manière d'Etienne Klein pour résumer cet article. Utilise des emojis et des hashtags. Le tweet doit obligatoirement contenir @EtienneKlein.\n"

@@ -54,7 +54,6 @@ logging.basicConfig(
 )
 logging.info("{:=^90}".format(""))
 
-
 def article_is_published(article_to_compare: str, tolerance: int = 50, comparison_type: str = 'title') -> bool:
     tolerance = float(tolerance) / 100
     logging.info(f"   Function article_is_published      : lancement")
@@ -64,11 +63,9 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
     logging.info(f"   Function article_is_published      : paramètre  {comparison_type}: {article_to_compare}")
     with open(f'{current_dir}/articles.json', 'r') as f:
         data = json.load(f)
-
     lemmatizer = WordNetLemmatizer()
     tokens_to_compare = word_tokenize(article_to_compare)
     lemmas_to_compare = [lemmatizer.lemmatize(token) for token in tokens_to_compare]
-
     for article in data['articles']:
         text_published = article[comparison_type]
         tokens_published = word_tokenize(text_published)
@@ -82,7 +79,6 @@ def article_is_published(article_to_compare: str, tolerance: int = 50, compariso
             return True
     logging.info(f"   Function article_is_published      : return False")
     return False
-
 
 def get_articles(google_news, excluded_terms=None):
     logging.info(f"   Function get_articles              : lancement")
@@ -107,7 +103,7 @@ def get_articles(google_news, excluded_terms=None):
                 continue
             logging.info(f"   Function get_articles              : appel fonction is_safe_search article_url")
             if not is_safe_search(article_url):
-                logging.warning(f"   Function get_articles              : URL {article_url} a été rejeté")
+                logging.warning(f" Function get_articles              : URL {article_url} a été rejeté")
                 continue
             logging.info(f"   Function get_articles              : titre article: {article_title}")
             logging.info(f"   Function get_articles              : date parution article : {article['date']}")
@@ -121,24 +117,23 @@ def get_articles(google_news, excluded_terms=None):
                 article_date = article.publish_date
                 formated_content = unidecode(article_content.replace(" ", "-").lower())
             except ArticleException as ae:
-                logging.error(f" Function get_articles              : Erreur de traitement de l'article : {article_url}. ArticleException      : {ae}")
+                logging.error(f"  Function get_articles              : Erreur de traitement de l'article : {article_url}. ArticleException      : {ae}")
                 continue
             except Exception as e:
-                logging.error(f" Function get_articles              : Erreur de traitement de l'article : {article_url}. Erreur      : {e}")
+                logging.error(f"  Function get_articles              : Erreur de traitement de l'article : {article_url}. Erreur      : {e}")
                 continue
             logging.info(f"   Function get_articles              : appel fonction is_safe_search formated_content")
             if not is_safe_search(formated_content):
                 logging.info(f"   Function get_articles              : le contenu de l'article a été rejeté (contenu)")
                 continue
             return article_title, article_url, article_date, article_content
-        logging.error(f" Function get_articles              : plus aucun résultat n'a été trouvé pour la recherche marmi {len(google_news)} articles")
+        logging.error(f"  Function get_articles              : plus aucun résultat n'a été trouvé pour la recherche parmi {len(google_news)} articles")
         push_last_log_to_web()
         sys.exit(1)
     else:
         logging.warning(f"   Function get_articles              : aucun résultat n'a été trouvé pour la recherche")
         push_last_log_to_web()
         sys.exit(1)
-
 
 def get_clean_tweet(tweet):
     logging.info(f"   Function get_clean_tweet           : lancement")
@@ -155,7 +150,6 @@ def get_clean_tweet(tweet):
     # Retourne le tweet nettoyé
     return tweet
 
-
 def get_google_news(subject: str, lang: str = 'fr'):
     logging.info(f"   Function get_google_news           : lancement")
     logging.info(f"   Function get_google_news           : paramètre subject : {subject}")
@@ -166,15 +160,14 @@ def get_google_news(subject: str, lang: str = 'fr'):
             logging.error(f"  Function get_google_news           : aucun résultat n'a été trouvé pour la recherche.")
             sys.exit(1)
     except Exception as e:
-        logging.error(f" Function get_google_news           : erreur s'est produite lors de l'appel à la méthode search()      : {e}")
+        logging.error(f"  Function get_google_news           : erreur s'est produite lors de l'appel à la méthode search()      : {e}")
         sys.exit(1)
     try:
         googlenews = googlenews.result()
     except AttributeError as e:
-        logging.error(f" Function get_google_news           : une erreur s'est produite lors de l'appel à la méthode result()      : {e}")
+        logging.error(f"  Function get_google_news           : une erreur s'est produite lors de l'appel à la méthode result()      : {e}")
         sys.exit(1)
     return googlenews
-
 
 def get_google_trends(url):
     logging.info(f"   Function get_google_news           : lancement")
@@ -200,7 +193,6 @@ def get_google_trends(url):
         })
         return results[0]['titre']
 
-
 def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
     try:
         logging.info(f"   Function get_gpt_response          : lancement")
@@ -213,7 +205,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
             "Authorization": "Bearer " + OPENAI_API_KEY,
         }
         data = {
-            "model": "gpt-3.5-turbo",
+            "model": config['chat-GPT']['openai_model'],
             "messages": [
                 {
                     "role": "sytem",
@@ -236,7 +228,6 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
         push_last_log_to_web()
         sys.exit(1)
 
-
 def get_picture_of_the_day(article_url):
     logging.info(f"   Function get_picture_of_the_day    : lancement")
     logging.info(f"   Function get_picture_of_the_day    : article_url : {article_url}")
@@ -251,8 +242,6 @@ def get_picture_of_the_day(article_url):
     else:
         logging.error(f"  Function get_picture_of_the_day    : Photo du jour déjà publiée !")
         sys.exit(1)
-
-
 
 def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr'):
     logging.info(f"   Function get_prompt                : lancement")
@@ -280,7 +269,6 @@ def get_prompt(article_content: str = None, subject: str = None, lang: str = 'fr
         prompt = f"{config['chat-GPT']['prompts']['resume_article'][lang]} {article_content}"
     return prompt
 
-
 def get_subject():
     logging.info(f"   Function get_subject               : lancement")
     subjects = config['subjects']
@@ -289,10 +277,9 @@ def get_subject():
     logging.info(f"   Function get_subject               : sujet obtenu : {chosen_subject}")
     return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
-
-def get_twitter_trends():
+def get_twitter_trends(lang: str = 'fr'):
     logging.info(f"   Function get_twitter_trends        : lancement")
-    url = "https://www.twitter-trending.com/rss/feed?c=france&gmt_z=Europe/Paris&l=fr"
+    url = f"{config['twitter_trends_url'][lang]}"
     feed = feedparser.parse(url)
     items = [[]]
     last_title = feed.entries[0].title
@@ -303,7 +290,6 @@ def get_twitter_trends():
         items_list = content.split(') ')
         items_list[-1] = items_list[-1].replace('..[top50]', '').strip()
         items_list = [f"{item.rsplit(' ', 1)[0]}" for item in items_list]
-
         if title != last_title:
             last_title = title
             items.append(items_list[1:])
@@ -315,12 +301,10 @@ def get_twitter_trends():
                     items[-1] += items_list[index:]
                     break
                 index += 1
-
     trends = [f"Trend_{i*30}" for i in range(len(items))]
     trend_arrays = [np.array(items[i]) for i in range(len(trends))]
     logging.info(f"   Function get_twitter_trends        : trend obtenu : {trend_arrays[0][0]}")
     return trend_arrays
-
 
 def inspect_launch_args(subject):
     logging.info(f"   Function inspect_launch_args       : lancement")
@@ -329,7 +313,6 @@ def inspect_launch_args(subject):
         logging.info(f"   Function inspect_launch_args       : script lancé par cron")
     else:
         logging.info(f"   Function inspect_launch_args       : script lancé manuellement")
-
 
 def is_safe_search(search: str):
     excluded_terms = config['excluded_terms']
@@ -361,8 +344,6 @@ def is_safe_theme(theme):
     else:
         return None
 
-
-
 def parse_arguments ():
     logging.info(f"   Function parse_arguments           : lancement")
     authorized_subjects = list(config['subjects_custom'].keys())
@@ -370,7 +351,6 @@ def parse_arguments ():
     parser.add_argument('-s', '--subject', choices=authorized_subjects, help='Subject to tweet about', default='random')
     parser.add_argument('--lang', help='Language of the subject', default='fr')
     args = parser.parse_args()
-
     # Initialisation des variables
     hashtag = ""
     subject = args.subject
@@ -379,10 +359,11 @@ def parse_arguments ():
     if subject == 'random':
         logging.info(f"   Function parse_arguments           : appel fonction get_subject")
         subject, lang = get_subject()
-        trends_array = get_twitter_trends()
+        trends_array = get_twitter_trends('fr')
         hashtag = trends_array[0][0]
         if not hashtag.startswith("#"):
             hashtag = "#" + hashtag
+        hashtag = hashtag.replace(" ", "").replace("#"," #").replace("'","")
     elif subject == 'etienne_klein':
         lang = config['subjects_custom']['etienne_klein']['lang']
     elif subject == 'etienne_klein_fr':
@@ -405,7 +386,7 @@ def parse_arguments ():
         lang = config['subjects_custom']['google_trends']['lang']
     elif subject == 'twitter_trends':
         logging.info(f"   Function parse_arguments           : appel fonction get_twitter_trends")
-        trends_array = get_twitter_trends()
+        trends_array = get_twitter_trends('fr')
         try:
             with open(f"{current_dir}/archives_trends.txt", "r") as f:
                 trends_file = f.readlines()
@@ -428,6 +409,7 @@ def parse_arguments ():
         hashtag = twitter_trend
         if not hashtag.startswith("#"):
             hashtag = "#" + hashtag
+        hashtag = hashtag.replace(" ", "").replace("#"," #").replace("'","")
         lang = config['subjects_custom']['twitter_trends']['lang']
         logging.info(f"   Function parse_arguments           : appel fonction get_prompt")
         prompt = get_prompt(hashtag, subject, lang)
@@ -444,10 +426,7 @@ def parse_arguments ():
     logging.info(f"   Function parse_arguments           : argument hashtag : {hashtag}")
     logging.info(f"   Function parse_arguments           : argument lang : {lang}")
     logging.info(f"   Function parse_arguments           : argument search_activated : {search_activated}")
-    print(subject,hashtag,lang,search_activated)
-    sys.exit()
     return subject,hashtag,lang,search_activated
-
 
 def publish_tweet(client, tweet_content: str, article_url: str = None):
     try:
@@ -463,10 +442,9 @@ def publish_tweet(client, tweet_content: str, article_url: str = None):
         response = client.create_tweet(text=tweet_content)
         return response
     except Exception as e:
-        logging.error(f" Function publish_tweet             : erreur lors de la publication du Tweet {tweet_content}: {e}")
+        logging.error(f"  Function publish_tweet             : erreur lors de la publication du Tweet {tweet_content}: {e}")
         push_last_log_to_web()
         return None
-
 
 def push_article_json(article_title: str, article_url: str):
     logging.info(f"   Function push_article_json         : lancement")
@@ -481,7 +459,7 @@ def push_article_json(article_title: str, article_url: str):
         json.dump(articles, f, indent=4)
 
 def push_last_log_to_web():
-    logging.info(f"   Function push_last_log_to_web      : lancement")
+    logging.debug(f"   Function push_last_log_to_web      : lancement")
     with open(f"{log_dir}/{log_name}","r") as source_file:
         lines = source_file.readlines()[-200:]
         lines.reverse()
@@ -489,21 +467,20 @@ def push_last_log_to_web():
             for line in lines:
                 target_file.write(line)
 
-
 def remove_duplicate_hashtags(text):
-    logging.info(f"   Function remove_duplicate_hashtags : lancement")
+    logging.info("   Function remove_duplicate_hashtags : lancement")
     words = text.split()
     unique_words = []
     seen_hashtags = set()
     for word in words:
-        if word.startswith("#"):
-            if word not in seen_hashtags:
-                seen_hashtags.add(word)
+        if word.lower().startswith("#"):
+            lowercase_word = word.lower()
+            if lowercase_word not in seen_hashtags:
+                seen_hashtags.add(lowercase_word)
                 unique_words.append(word)
             continue
         unique_words.append(word)
     return ' '.join(unique_words)
-
 
 def tweepy_client():
     logging.info(f"   Function tweepy_client             : lancement")
@@ -513,7 +490,6 @@ def tweepy_client():
         access_token=config['tweeter_keys']['access_token'],
         access_token_secret=config['tweeter_keys']['access_token_secret']
     )
-
 
 def main():
     try:
@@ -561,7 +537,7 @@ def main():
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
             # Vérification si le tweet est trop long
-            max_tweet_length = 250
+            max_tweet_length = 249
             max_attempts = 3
             attempts = 0
             while len(tweet) > max_tweet_length and attempts < max_attempts:
@@ -570,7 +546,7 @@ def main():
                 prompt = get_prompt(tweet, 'too_long', lang)
                 logging.warning(f"Main                               : longueur Tweet      : {len(tweet)}")
                 logging.warning(f"Main                               : le nouveau prompt est {prompt}")
-                tweet = get_gpt_response(prompt, 0.8, lang)
+                tweet = f"{get_gpt_response(prompt, 0.8, lang)}  {hashtag}"
                 logging.info(f"   Main                               : appel fonction get_clean_tweet")
                 tweet = get_clean_tweet(tweet)
                 attempts += 1
@@ -591,7 +567,6 @@ def main():
         logging.error(f"  Main                               : une erreur critique s'est produite      : {e}")
         push_last_log_to_web()
         pass
-
 
 if __name__ == "__main__":
     main()
