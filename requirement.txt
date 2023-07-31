@@ -4,6 +4,7 @@ GoogleNews>=1.5.9
 newspaper3k>=0.2.8
 nltk>=3.8.1
 numpy>=1.20.0
+pandas
 pip>=23.1.2
 pyshorteners>=1.0.1
 python-Levenshtein>=0.12.2
