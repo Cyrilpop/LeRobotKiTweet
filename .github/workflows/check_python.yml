@@ -27,7 +27,12 @@ jobs:
       - name: Test with pytest
         run: |
           python -m pip install -r requirement.txt
-          pip install pytest pytest-cov
 
-      - name: List files in the repository
-        run: ls -R
+      - name: Run leRobotKiTweet script
+        run: |
+          echo '{"articles": [{"title": "Drogue : une autre histoire de la civilisation","url": "https://example.com/article1"}]}' > articles.json
+          ./lerobotkitweet.py -t
+          ls -l /tmp/leRobotKiTweet
+
+      - name: Print log
+        run: cat /tmp/leRobotKiTweet/Twitos.log
