@@ -10,6 +10,7 @@ import random
 import re
 import sys
 import textwrap
+import urllib.parse
 
 # Imports de modules externes
 import requests
@@ -123,7 +124,7 @@ def get_articles(google_news, excluded_terms=None):
             if article_is_published(article_title, 80, 'title'):
                 logging.warning(format_log_message(f"│ Function get_articles              │ article {article_title} a déjà été publié."))
                 continue
-            article_url = article["link"]
+            article_url = urllib.parse.parse_qs(urllib.parse.urlparse(article["link"]).query)['url'][0]
             if "http" not in article_url:
                 logging.warning(format_log_message(f"│ Function get_articles              │ URL {article_url} incorrecte"))
                 continue
