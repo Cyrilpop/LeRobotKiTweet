@@ -10,6 +10,7 @@ import random
 import re
 import sys
 import textwrap
+import urllib.parse
 
 # Imports de modules externes
 import requests
@@ -123,7 +124,8 @@ def get_articles(google_news, excluded_terms=None):
             if article_is_published(article_title, 80, 'title'):
                 logging.warning(format_log_message(f"│ Function get_articles              │ article {article_title} a déjà été publié."))
                 continue
-            article_url = article["link"]
+            #article_url = urllib.parse.parse_qs(urllib.parse.urlparse(article["link"]).query)['url'][0]
+            article_url =  article['link']
             if "http" not in article_url:
                 logging.warning(format_log_message(f"│ Function get_articles              │ URL {article_url} incorrecte"))
                 continue
@@ -247,6 +249,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
             ],
             "temperature": temperature,
             "max_tokens": config['chat-GPT']['max_tokens'],
+            "stop": None
         }
         logging.info(format_log_message("│ Function get_gpt_response          │ appel de l'API GPT"))
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -312,7 +315,7 @@ def get_subject():
     return subjects[chosen_subject]['name'], subjects[chosen_subject]['lang']
 
 
-def get_twitter_trends(lang: str = 'fr'):
+def get_twitter_trends(lang: str = 'fr', check_secur: bool = True):
     logging.debug(format_log_message("│ Function get_twitter_trends        │ lancement"))
     url = f"{config['twitter_trends_url'][lang]}"
     feed = feedparser.parse(url)
@@ -332,10 +335,13 @@ def get_twitter_trends(lang: str = 'fr'):
             index = 1
             while index < len(items_list):
                 logging.info(format_log_message(f"│ Function get_twitter_trends        │ appel fonction is_safe_search pour {items_list[index]}"))
-                if is_safe_search(items_list[index]):
-                    items[-1] += items_list[index:]
+                if check_secur:
+                    if is_safe_search(items_list[index]):
+                        items[-1] += items_list[index:]
+                        break
+                    index += 1
+                else:
                     break
-                index += 1
     trends = [f"Trend_{i*30}" for i in range(len(items))]
     trend_arrays = [np.array(items[i]) for i in range(len(trends))]
     logging.info(format_log_message(f"│ Function get_twitter_trends        │ trend obtenu : {trend_arrays[0][0]}"))
@@ -612,7 +618,7 @@ def main():
         # Vérification si le tweet n'est pas vide
         if tweet is not None:
             # Vérification si le tweet est trop long
-            max_tweet_length = 249
+            max_tweet_length = 259
             max_attempts = 3
             attempts = 0
             while len(tweet) > max_tweet_length and attempts < max_attempts:
