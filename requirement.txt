@@ -1,6 +1,6 @@
 feedparser>=6.0.8
 fuzzywuzzy>=0.18.0
-GoogleNews>=1.5.9
+GoogleNews>=1.6.9
 newspaper3k>=0.2.8
 nltk>=3.8.1
 numpy>=1.20.0

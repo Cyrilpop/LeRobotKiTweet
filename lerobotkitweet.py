@@ -10,6 +10,7 @@ import random
 import re
 import sys
 import textwrap
+import urllib.parse
 
 # Imports de modules externes
 import requests
@@ -123,7 +124,7 @@ def get_articles(google_news, excluded_terms=None):
             if article_is_published(article_title, 80, 'title'):
                 logging.warning(format_log_message(f"│ Function get_articles              │ article {article_title} a déjà été publié."))
                 continue
-            article_url = article["link"]
+            article_url = urllib.parse.parse_qs(urllib.parse.urlparse(article["link"]).query)['url'][0]
             if "http" not in article_url:
                 logging.warning(format_log_message(f"│ Function get_articles              │ URL {article_url} incorrecte"))
                 continue
@@ -254,7 +255,7 @@ def get_gpt_response(prompt: str, temperature: float = 0.8, lang: str = 'fr'):
         logging.info(format_log_message(f"│ Function get_gpt_response          │ nombre de token utilisés : {response_data['usage']['total_tokens']}"))
         return response_data["choices"][0]["message"]["content"]
     except Exception as e:
-        logging.error(format_log_message("f│ Function get_gpt_response          │ erreur lors de l'appel à l'API OpenAI : {response_data['error']['message']}"))
+        logging.error(format_log_message(f"│ Function get_gpt_response          │ erreur lors de l'appel à l'API OpenAI : {response_data['error']['message']}"))
         print(e)
         logging.info(footer)
         sys.exit(1)
